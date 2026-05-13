@@ -66,7 +66,7 @@ Replace `<your-account>` with the GitHub user or organization that owns the repo
 
 ```powershell
 python -m pip install -U pip
-python -m pip install "git+https://github.com/<your-account>/ifcusd.git"
+python -m pip install "git+https://github.com/isaddiq/ifcusd.git"
 ```
 
 ### Option 2: Install from a local clone
