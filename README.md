@@ -74,7 +74,7 @@ python -m pip install "git+https://github.com/isaddiq/ifcusd.git"
 Use this workflow for development or for running the converter from a downloaded copy.
 
 ```powershell
-git clone https://github.com/<your-account>/ifcusd.git
+git clone https://github.com/isaddiq/ifcusd.git
 cd ifcusd
 
 python -m venv .venv
