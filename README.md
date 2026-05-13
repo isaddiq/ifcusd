@@ -33,16 +33,16 @@ IFC model  ->  IfcOpenShell geometry + metadata  ->  OpenUSD stage
 
 ## Features
 
-| Area | What IfcUSD writes |
-| --- | --- |
-| Geometry | Tessellated IFC products as `UsdGeom.Mesh` prims |
-| Hierarchy | IFC spatial hierarchy as USD `Xform` prims under `/IFC` |
-| Materials | USD Preview Surface materials, diffuse/specular colors, opacity, and face subsets |
-| Textures | External texture references from IFC surface-style texture data when IfcOpenShell exposes it |
-| Metadata | STEP id, IFC class, GlobalId, Name, ObjectType, Tag, PredefinedType, and more |
-| Properties | IFC property sets and quantity takeoffs as USD attributes |
-| Relationships | Spatial containers, aggregate parents, types, groups, layers, openings, and references |
-| Units | USD stage unit metadata from the IFC unit assignment |
+| Area          | What IfcUSD writes                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------- |
+| Geometry      | Tessellated IFC products as `UsdGeom.Mesh` prims                                             |
+| Hierarchy     | IFC spatial hierarchy as USD `Xform` prims under `/IFC`                                      |
+| Materials     | USD Preview Surface materials, diffuse/specular colors, opacity, and face subsets            |
+| Textures      | External texture references from IFC surface-style texture data when IfcOpenShell exposes it |
+| Metadata      | STEP id, IFC class, GlobalId, Name, ObjectType, Tag, PredefinedType, and more                |
+| Properties    | IFC property sets and quantity takeoffs as USD attributes                                    |
+| Relationships | Spatial containers, aggregate parents, types, groups, layers, openings, and references       |
+| Units         | USD stage unit metadata from the IFC unit assignment                                         |
 
 IfcUSD is geometry-first. It preserves BIM metadata, but it writes tessellated meshes rather
 than native parametric IFC solids.
@@ -61,12 +61,11 @@ them before conversion and can install missing runtime packages automatically un
 
 ### Option 1: Install from GitHub
 
-After uploading this repository to GitHub, users can install it directly with `pip`.
-Replace `<your-account>` with the GitHub user or organization that owns the repository.
+Install directly from the GitHub repository with `pip`.
 
 ```powershell
 python -m pip install -U pip
-python -m pip install "git+https://github.com/<your-account>/ifcusd.git"
+python -m pip install "git+https://github.com/isaddiq/ifcusd.git"
 ```
 
 ### Option 2: Install from a local clone
@@ -74,7 +73,7 @@ python -m pip install "git+https://github.com/<your-account>/ifcusd.git"
 Use this workflow for development or for running the converter from a downloaded copy.
 
 ```powershell
-git clone https://github.com/<your-account>/ifcusd.git
+git clone https://github.com/isaddiq/ifcusd.git
 cd ifcusd
 
 python -m venv .venv
@@ -151,28 +150,28 @@ ifcusd convert .\model.ifc .\model.usd --exclude-type IfcSpace --exclude-type If
 
 Output formats:
 
-| Extension | Use case |
-| --- | --- |
-| `.usd` | Standard USD file extension |
-| `.usda` | ASCII USD, useful for debugging and metadata inspection |
-| `.usdc` | Binary USD crate, usually smaller and faster for production workflows |
+| Extension | Use case                                                              |
+| --------- | --------------------------------------------------------------------- |
+| `.usd`    | Standard USD file extension                                           |
+| `.usda`   | ASCII USD, useful for debugging and metadata inspection               |
+| `.usdc`   | Binary USD crate, usually smaller and faster for production workflows |
 
 CLI options:
 
-| Option | Description |
-| --- | --- |
-| `--threads N` | Number of IfcOpenShell geometry threads. Defaults to CPU count minus one. |
-| `--verbose` | Print dependency install commands and skipped geometry/write details. |
-| `--include-type IfcWall` | Convert only a specific IFC class. Can be passed more than once. |
-| `--exclude-type IfcSpace` | Skip a specific IFC class. Can be passed more than once. |
-| `--no-metadata` | Do not write IFC metadata attributes. |
-| `--no-properties` | Do not write IFC property sets. |
-| `--no-quantities` | Do not write IFC quantity takeoffs. |
-| `--no-materials` | Do not write material metadata. |
-| `--local-coords` | Use local tessellation coordinates instead of world coordinates. |
-| `--up-axis Y` | Write the USD stage with Y-up. The default is Z-up. |
-| `--fail-on-geometry-error` | Stop at the first geometry or USD write error. |
-| `--no-auto-install` | Do not install missing runtime dependencies automatically. |
+| Option                     | Description                                                               |
+| -------------------------- | ------------------------------------------------------------------------- |
+| `--threads N`              | Number of IfcOpenShell geometry threads. Defaults to CPU count minus one. |
+| `--verbose`                | Print dependency install commands and skipped geometry/write details.     |
+| `--include-type IfcWall`   | Convert only a specific IFC class. Can be passed more than once.          |
+| `--exclude-type IfcSpace`  | Skip a specific IFC class. Can be passed more than once.                  |
+| `--no-metadata`            | Do not write IFC metadata attributes.                                     |
+| `--no-properties`          | Do not write IFC property sets.                                           |
+| `--no-quantities`          | Do not write IFC quantity takeoffs.                                       |
+| `--no-materials`           | Do not write material metadata.                                           |
+| `--local-coords`           | Use local tessellation coordinates instead of world coordinates.          |
+| `--up-axis Y`              | Write the USD stage with Y-up. The default is Z-up.                       |
+| `--fail-on-geometry-error` | Stop at the first geometry or USD write error.                            |
+| `--no-auto-install`        | Do not install missing runtime dependencies automatically.                |
 
 Verify the installed command:
 
@@ -258,11 +257,11 @@ Entity metadata can include:
 
 The repository includes sample IFC files in the `ifc` folder:
 
-| File | Purpose |
-| --- | --- |
+| File                   | Purpose                               |
+| ---------------------- | ------------------------------------- |
 | `ifc/Architecture.ifc` | Small architectural conversion sample |
-| `ifc/Structural.ifc` | Structural model sample |
-| `ifc/example.ifc` | Additional test/example IFC file |
+| `ifc/Structural.ifc`   | Structural model sample               |
+| `ifc/example.ifc`      | Additional test/example IFC file      |
 
 After converting a sample, verify that OpenUSD can read the result:
 
