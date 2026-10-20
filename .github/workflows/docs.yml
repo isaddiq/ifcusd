@@ -1,17 +1,14 @@
 # Builds the static documentation website from website/ and publishes it to GitHub Pages.
 # One-time setup: repository Settings > Pages > Build and deployment > Source: "GitHub Actions".
+# This must be the only workflow that deploys to Pages; do not add GitHub's Jekyll or
+# static-HTML starter workflows, they would publish the README instead of the site.
 
 name: Website
 
 on:
+  # Every push to main redeploys, so the published site always matches main.
   push:
     branches: [main]
-    paths:
-      - "website/**"
-      - "src/ifcusd/**"
-      - "CITATION.cff"
-      - "LICENSE"
-      - ".github/workflows/docs.yml"
   pull_request:
     paths:
       - "website/**"
