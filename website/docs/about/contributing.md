@@ -91,12 +91,29 @@ Three rules keep the output reproducible:
 ## Releasing
 
 1. Update `__version__` in `src/ifcusd/_version.py` and add a section to the
-   changelog page, `website/docs/about/changelog.md`.
-2. Commit, tag (`git tag v1.0.1`) and push the tag.
-3. Create a GitHub release from the tag. The *Upload Python Package* workflow
-   runs the tests, builds the wheel and sdist, and publishes to PyPI through
-   trusted publishing (configure the `pypi` environment and the trusted
-   publisher on PyPI once).
+   changelog page, `website/docs/about/changelog.md`. Commit and push.
+2. On GitHub, **Releases ▸ Draft a new release**: create the tag
+   `v<version>` (for example `v1.0.1`) on `main`, use `IfcUSD <version>` as
+   the title, paste that version's changelog section as the notes, and publish.
+3. The *Release* workflow (`.github/workflows/python-publish.yml`) then checks
+   that the tag matches `__version__`, runs the tests, builds the package, and
+   attaches these files to the release:
+
+    | File | Content |
+    | --- | --- |
+    | `ifcusd-<version>-py3-none-any.whl` | the package, installable with `pip install <file>` |
+    | `ifcusd-<version>.tar.gz` | source distribution |
+    | `ifcusd-unity-integration-<version>.zip` | the Unity editor script and component, extracts to `Assets/IfcUSD/` |
+    | `SHA256SUMS.txt` | checksums of the files above |
+
+    Do not upload files by hand; GitHub adds the source code archives itself.
+
+4. Optional, publishing to PyPI: on pypi.org add a *pending trusted publisher*
+   for project `IfcUSD`, owner `isaddiq`, repository `ifcusd`, workflow
+   `python-publish.yml`, environment `pypi`. Then set the repository variable
+   `PUBLISH_TO_PYPI` to `true` (**Settings ▸ Secrets and variables ▸ Actions ▸
+   Variables**). From then on every release is also published to PyPI, and
+   `pip install ifcusd` works.
 
 ## Documentation website
 
