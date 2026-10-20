@@ -1,10 +1,13 @@
+"""Lazy access to the Pixar USD Python bindings."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
+from ifcusd.errors import MissingUsdDependencyError
 
-class MissingUsdDependencyError(RuntimeError):
-    """Raised when Pixar USD Python bindings are not installed."""
+__all__ = ["MissingUsdDependencyError", "UsdBindings", "import_usd", "usd_version"]
 
 
 @dataclass(frozen=True)
@@ -17,14 +20,24 @@ class UsdBindings:
     Vt: object
 
 
+@lru_cache(maxsize=1)
 def import_usd() -> UsdBindings:
     try:
         from pxr import Gf, Sdf, Usd, UsdGeom, UsdShade, Vt
     except ImportError as exc:
         raise MissingUsdDependencyError(
             "Pixar USD Python bindings are required to write USD files. "
-            "Install them with `python -m pip install usd-core`, or install this "
-            "package with `python -m pip install -e .`."
+            "Install them with `python -m pip install usd-core`, or run IfcUSD inside an "
+            "application that ships them (for example NVIDIA Omniverse Kit)."
         ) from exc
 
     return UsdBindings(Gf=Gf, Sdf=Sdf, Usd=Usd, UsdGeom=UsdGeom, UsdShade=UsdShade, Vt=Vt)
+
+
+def usd_version() -> str:
+    try:
+        from pxr import Usd
+
+        return ".".join(str(part) for part in Usd.GetVersion())
+    except Exception:
+        return "unavailable"

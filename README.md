@@ -1,386 +1,268 @@
 # IfcUSD
 
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![IfcOpenShell](https://img.shields.io/badge/IFC-IfcOpenShell-green.svg)](https://ifcopenshell.org/)
-[![OpenUSD](https://img.shields.io/badge/USD-OpenUSD-orange.svg)](https://openusd.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](#license)
+[![Tests](https://github.com/isaddiq/ifcusd/actions/workflows/tests.yml/badge.svg)](https://github.com/isaddiq/ifcusd/actions/workflows/tests.yml)
+[![Python](https://img.shields.io/badge/python-3.10%20%E2%80%93%203.13-blue.svg)](https://www.python.org/)
+[![IFC](https://img.shields.io/badge/IFC-2X3%20%7C%204%20%7C%204X3%20%7C%205-green.svg)](https://technical.buildingsmart.org/standards/ifc/)
+[![OpenUSD](https://img.shields.io/badge/OpenUSD-24.8%2B-orange.svg)](https://openusd.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
-IfcUSD is a Python converter that turns IFC building models into OpenUSD files. It uses
-[IfcOpenShell](https://ifcopenshell.org/) to read and tessellate IFC geometry, then writes
-`.usd`, `.usda`, or `.usdc` files through Pixar's OpenUSD Python bindings.
-
-The converter is designed for BIM-to-USD interchange: it writes mesh geometry for USD tools
-while preserving IFC identity, hierarchy, materials, properties, quantities, and relationship
-metadata.
+**IfcUSD converts IFC building models to OpenUSD without losing the BIM.**
+Geometry, spatial structure, every attribute, property set and quantity, types,
+materials, classifications, groups, layers and relationships are written as
+typed, documented USD data. The output is reproducible byte for byte and opens
+directly in NVIDIA Omniverse, Unity, usdview, Blender and other OpenUSD tools.
 
 ```text
-IFC model  ->  IfcOpenShell geometry + metadata  ->  OpenUSD stage
+IFC2X3 / IFC4 / IFC4X3 / IFC5 ─▶ IfcOpenShell (read + tessellate) ─▶ IfcUSD mapping ─▶ .usd / .usda / .usdc / .usdz
+                                                                        └─▶ report.json, metadata.json
 ```
 
-## Contents
+## Why IfcUSD
 
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Command Line Usage](#command-line-usage)
-- [Python API](#python-api)
-- [What Gets Written](#what-gets-written)
-- [Sample IFC Files](#sample-ifc-files)
-- [Development](#development)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
+| | |
+| --- | --- |
+| **Complete** | Every `IfcRoot` instance is accounted for in a coverage report (`missing: 0` is checked). Seven property kinds, quantities, types, materials (layer, profile and constituent sets), classifications, documents, groups, systems, zones, layers, owner history and *all* `IfcRel*` relationships are converted. |
+| **Typed and lossless** | IFC values keep their types (`bool`, `int`, `double`, `token` with allowed values…), defined types (`IfcLengthMeasure`) and units (`MILLIMETRE`). Original names stay in `displayName`/`displayGroup`. Attribute naming is reversible. |
+| **Any IFC version** | IFC2X3, IFC4, IFC4X3_ADD2 natively. IFC4X1, IFC4X2, IFC4X3 (final/TC1/ADD1), IFC4_ADD1/ADD2 and IFC2X3_TC1 identifiers are read with the closest supported schema, and anything that schema cannot represent is reported. IFC5 (`.ifcx`, alpha) is composed with buildingSMART's layering rules. `.ifczip` is supported. |
+| **A real USD schema** | A versioned, codeless USD schema (`IfcEntityAPI`, `IfcPropertySetAPI`, `IfcQuantitySetAPI`, `IfcFileAPI`, `IfcGeoreferenceAPI`) documents the mapping and enables schema-aware queries. It is optional at runtime, so files work everywhere. |
+| **Correct geometry** | Local-coordinate meshes with double-precision relative transforms (accurate for georeferenced sites), USD instancing for shared type geometry, per-face materials as `GeomSubset`s, axes and alignments as curves. Verified against IfcOpenShell's world-space tessellation to within 5 × 10⁻⁵ m. |
+| **Reproducible** | Byte-identical output for any thread count. Every file records the source SHA-256, tool versions and options. `ifcusd validate --source` proves nothing was lost. |
+| **Target profiles** | `omniverse` (OmniPBR MDL, Replicator semantic labels, instancing), `unity` (Y-up, importer-safe content, metadata sidecar plus an editor script), `generic`. |
 
-## Features
-
-| Area          | What IfcUSD writes                                                                           |
-| ------------- | -------------------------------------------------------------------------------------------- |
-| Geometry      | Tessellated IFC products as `UsdGeom.Mesh` prims                                             |
-| Hierarchy     | IFC spatial hierarchy as USD `Xform` prims under `/IFC`                                      |
-| Materials     | USD Preview Surface materials, diffuse/specular colors, opacity, and face subsets            |
-| Textures      | External texture references from IFC surface-style texture data when IfcOpenShell exposes it |
-| Metadata      | STEP id, IFC class, GlobalId, Name, ObjectType, Tag, PredefinedType, and more                |
-| Properties    | IFC property sets and quantity takeoffs as USD attributes                                    |
-| Relationships | Spatial containers, aggregate parents, types, groups, layers, openings, and references       |
-| Units         | USD stage unit metadata from the IFC unit assignment                                         |
-
-IfcUSD is geometry-first. It preserves BIM metadata, but it writes tessellated meshes rather
-than native parametric IFC solids.
-
-## Requirements
-
-- Python 3.10 or newer
-- `ifcopenshell>=0.8.0`
-- `usd-core>=24.8`
-
-The package declares these runtime dependencies in `pyproject.toml`. The CLI also checks for
-them before conversion and can install missing runtime packages automatically unless
-`--no-auto-install` is used.
+How this compares with IfcOpenShell's USD serializer, Omniverse's HOOPS
+converter and glTF-based routes is covered in
+[docs/related-work.md](docs/related-work.md). The IFC ↔ USD schema analysis and
+the full mapping specification are in
+[docs/schema-mapping.md](docs/schema-mapping.md).
 
 ## Installation
 
-### Option 1: Install from GitHub
+Requires Python 3.10 or newer. Dependencies (`ifcopenshell`, `usd-core`, `numpy`)
+install automatically.
 
-Install directly from the GitHub repository with `pip`.
-
-```powershell
-python -m pip install -U pip
+```bash
 python -m pip install "git+https://github.com/isaddiq/ifcusd.git"
 ```
 
-### Option 2: Install from a local clone
+From a clone, for development:
 
-Use this workflow for development or for running the converter from a downloaded copy.
-
-```powershell
+```bash
 git clone https://github.com/isaddiq/ifcusd.git
 cd ifcusd
-
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-python -m pip install -U pip
-python -m pip install -e .
-```
-
-On macOS or Linux, activate the virtual environment with:
-
-```bash
-source .venv/bin/activate
-```
-
-Then install the project:
-
-```bash
-python -m pip install -U pip
-python -m pip install -e .
-```
-
-### Option 3: Run without installing
-
-From the repository root, use the helper script:
-
-```powershell
-python .\convert_ifc_to_usd.py .\ifc\Architecture.ifc .\ifc\Architecture.usd
-```
-
-The helper script adds `src` to Python's import path, checks runtime dependencies, and runs
-the same conversion workflow as the installed `ifcusd` command.
-
-## Quick Start
-
-Convert the included architectural sample:
-
-```powershell
-ifcusd convert .\ifc\Architecture.ifc .\ifc\Architecture.usd --threads 1 --verbose
-```
-
-Expected output:
-
-```text
-converted 14/14 meshed elements to ifc\Architecture.usd
-```
-
-Create a human-readable USD ASCII file:
-
-```powershell
-ifcusd convert .\ifc\Architecture.ifc .\ifc\Architecture.usda
-```
-
-Create a binary USD crate file:
-
-```powershell
-ifcusd convert .\ifc\Architecture.ifc .\ifc\Architecture.usdc
-```
-
-## Command Line Usage
-
-```text
-ifcusd convert INPUT.ifc OUTPUT.usd [options]
-```
-
-Examples:
-
-```powershell
-ifcusd convert .\ifc\Architecture.ifc .\ifc\Architecture.usd
-ifcusd convert .\ifc\Architecture.ifc .\ifc\Architecture.usda --threads 8 --verbose
-ifcusd convert .\ifc\Architecture.ifc .\ifc\WallsOnly.usdc --include-type IfcWall
-ifcusd convert .\model.ifc .\model.usd --exclude-type IfcSpace --exclude-type IfcOpeningElement
-```
-
-Output formats:
-
-| Extension | Use case                                                              |
-| --------- | --------------------------------------------------------------------- |
-| `.usd`    | Standard USD file extension                                           |
-| `.usda`   | ASCII USD, useful for debugging and metadata inspection               |
-| `.usdc`   | Binary USD crate, usually smaller and faster for production workflows |
-
-CLI options:
-
-| Option                     | Description                                                               |
-| -------------------------- | ------------------------------------------------------------------------- |
-| `--threads N`              | Number of IfcOpenShell geometry threads. Defaults to CPU count minus one. |
-| `--verbose`                | Print dependency install commands and skipped geometry/write details.     |
-| `--include-type IfcWall`   | Convert only a specific IFC class. Can be passed more than once.          |
-| `--exclude-type IfcSpace`  | Skip a specific IFC class. Can be passed more than once.                  |
-| `--no-metadata`            | Do not write IFC metadata attributes.                                     |
-| `--no-properties`          | Do not write IFC property sets.                                           |
-| `--no-quantities`          | Do not write IFC quantity takeoffs.                                       |
-| `--no-materials`           | Do not write material metadata.                                           |
-| `--local-coords`           | Use local tessellation coordinates instead of world coordinates.          |
-| `--up-axis Y`              | Write the USD stage with Y-up. The default is Z-up.                       |
-| `--fail-on-geometry-error` | Stop at the first geometry or USD write error.                            |
-| `--no-auto-install`        | Do not install missing runtime dependencies automatically.                |
-
-Verify the installed command:
-
-```powershell
-ifcusd --help
-ifcusd convert --help
-```
-
-## Python API
-
-Basic conversion:
-
-```python
-from ifcusd import ConversionOptions, convert_file
-
-result = convert_file(
-    "ifc/Architecture.ifc",
-    "ifc/Architecture.usd",
-    ConversionOptions(threads=4),
-)
-
-print("input:", result.input_path)
-print("output:", result.output_path)
-print("meshes:", result.meshes_written)
-print("elements:", result.elements_seen)
-print("spatial prims:", result.spatial_prims_written)
-print("skipped:", len(result.skipped_geometry))
-```
-
-Convert only selected IFC classes:
-
-```python
-from ifcusd import ConversionOptions, convert_file
-
-options = ConversionOptions(include_types=("IfcWall", "IfcDoor"))
-convert_file("model.ifc", "walls_and_doors.usd", options)
-```
-
-Disable selected metadata groups:
-
-```python
-from ifcusd import ConversionOptions, convert_file
-
-options = ConversionOptions(
-    include_properties=False,
-    include_quantities=False,
-    include_materials=True,
-)
-convert_file("model.ifc", "geometry_with_materials.usd", options)
-```
-
-## What Gets Written
-
-IfcUSD creates a USD stage with `/IFC` as the default prim.
-
-The conversion workflow is:
-
-1. Open the IFC file with IfcOpenShell.
-2. Read the IFC unit assignment and configure USD meters-per-unit.
-3. Build stable USD paths from IFC hierarchy, names, STEP ids, and GlobalIds.
-4. Write spatial hierarchy prims for projects, sites, buildings, storeys, spaces, and facilities.
-5. Tessellate selected IFC products with IfcOpenShell.
-6. Write `UsdGeom.Mesh` prims, normals, UVs, materials, material subsets, and texture references.
-7. Write IFC identity, property, quantity, material, style, and relationship metadata.
-8. Save the requested `.usd`, `.usda`, or `.usdc` file.
-
-The USD stage and root `/IFC` prim include:
-
-- `/IFC` as the default prim
-- Stage meters-per-unit and up-axis settings
-- Root `/IFC` metadata attributes for source IFC file path, IFC schema, and meters-per-unit value
-
-Entity metadata can include:
-
-- IFC class and STEP id
-- GlobalId, Name, Description, ObjectType, Tag, PredefinedType, LongName, and Phase
-- Property sets and quantity takeoffs
-- Type references and material references
-- Spatial container and aggregate parent relationships
-- Groups, presentation layers, referenced structures, openings, and external references
-
-## Sample IFC Files
-
-The repository includes sample IFC files in the `ifc` folder:
-
-| File                   | Purpose                               |
-| ---------------------- | ------------------------------------- |
-| `ifc/Architecture.ifc` | Small architectural conversion sample |
-| `ifc/Structural.ifc`   | Structural model sample               |
-| `ifc/example.ifc`      | Additional test/example IFC file      |
-
-After converting a sample, verify that OpenUSD can read the result:
-
-```powershell
-@'
-from pxr import Usd
-
-stage = Usd.Stage.Open("ifc/Architecture.usd")
-if stage is None:
-    raise SystemExit("Could not open USD stage")
-
-mesh_count = sum(1 for prim in stage.Traverse() if prim.GetTypeName() == "Mesh")
-metadata_count = sum(1 for prim in stage.Traverse() if prim.HasAttribute("ifc:metadata"))
-print(f"meshes={mesh_count} metadata_prims={metadata_count}")
-'@ | python -
-```
-
-macOS and Linux shell form:
-
-```bash
-python - <<'PY'
-from pxr import Usd
-
-stage = Usd.Stage.Open("ifc/Architecture.usd")
-if stage is None:
-    raise SystemExit("Could not open USD stage")
-
-mesh_count = sum(1 for prim in stage.Traverse() if prim.GetTypeName() == "Mesh")
-metadata_count = sum(1 for prim in stage.Traverse() if prim.HasAttribute("ifc:metadata"))
-print(f"meshes={mesh_count} metadata_prims={metadata_count}")
-PY
-```
-
-## Development
-
-Install development dependencies:
-
-```powershell
+.venv/Scripts/activate            # Windows;  source .venv/bin/activate on macOS/Linux
 python -m pip install -e ".[dev]"
 ```
 
-Run checks:
+Inside NVIDIA Omniverse Kit, which already ships `pxr`, install with
+`--no-deps` and add `ifcopenshell numpy`.
 
-```powershell
-python -m pytest -q
-python -m ruff check .
-python -m compileall src tests
+## Quick start
+
+```bash
+ifcusd convert model.ifc model.usdc                         # generic OpenUSD
+ifcusd convert model.ifc model.usdc --profile omniverse     # NVIDIA Omniverse
+ifcusd convert model.ifc model.usdz --profile unity --metadata-json model.ifcusd.json
+ifcusd convert model.ifc model.usda --validate --report report.json
 ```
-
-Project layout:
 
 ```text
-ifcusd/
-+-- convert_ifc_to_usd.py      # Run-from-clone helper
-+-- ifc/                       # Sample IFC files
-+-- pyproject.toml             # Package metadata and dependencies
-+-- src/ifcusd/                # Converter package
-+-- tests/                     # Pytest test suite
+input   model.ifc  [IFC4]
+output  model.usdc  [profile: omniverse]
+prims 84 | elements 15 | spatial 7 | types 16 | relationships 57
+geometry: meshes 14 | instances 0 (prototypes 0) | curves 0 | triangles 1167 | materials 10
+data: property sets 20 | properties 43 | quantities 25
+coverage of 117 IfcRoot instances: prim 40, native 57, attributes 20, filtered 0, skipped 0, missing 0
+completed in 0.31s (complete)
 ```
 
-## Troubleshooting
+```python
+from ifcusd import ConversionOptions, convert, validate_usd
 
-### `ifcusd` is not recognized
+result = convert("model.ifc", "model.usdc", ConversionOptions.for_profile("omniverse"))
+print("\n".join(result.report.summary_lines()))
+assert result.report.complete
 
-Install the package in the active Python environment:
-
-```powershell
-python -m pip install -e .
+check = validate_usd("model.usdc", source="model.ifc")   # re-reads the IFC and compares
+assert check.ok
 ```
 
-Then activate the virtual environment or open a new terminal.
+Reading IFC data back from USD:
 
-### `ModuleNotFoundError: No module named 'pxr'`
+```python
+from pxr import Usd
 
-The `pxr` modules come from `usd-core`. The converter installs this automatically before
-conversion unless `--no-auto-install` is passed.
-
-Manual install:
-
-```powershell
-python -m pip install "usd-core>=24.8"
+stage = Usd.Stage.Open("model.usdc")
+for prim in stage.Traverse():
+    if prim.GetAttribute("ifc:class").Get() == "IfcWall":
+        fire = prim.GetAttribute("ifc:pset:Pset_WallCommon:FireRating")
+        print(prim.GetAttribute("ifc:globalId").Get(), fire.Get() if fire else None)
 ```
 
-### `ModuleNotFoundError: No module named 'ifcopenshell'`
+## What gets written
 
-Manual install:
-
-```powershell
-python -m pip install "ifcopenshell>=0.8.0"
+```text
+/World                                Xform  assembly   IfcFileAPI, IfcGeoreferenceAPI (header, units, CRS)
+  My_Project_<guid>                   Xform  assembly   IfcEntityAPI
+    Site/Building/Level_1             Xform  group      spatial structure with real placements
+      Basic_Wall_<guid>               Xform  component  ifc:* attributes, ifc:pset:*, ifc:qto:*, rel ifc:isTypedBy…
+        Body                          Mesh              triangles, normals, extent, material binding / subsets
+        Axis                          BasisCurves       guide purpose
+        Opening_<guid>                Xform  subcomponent  ifc:parentRelationship = "voids"
+  IfcData                             Scope             types, groups (collections), materials, classifications,
+                                                        documents, layers, owner history, other relationships
+  Looks                               Scope             UsdPreviewSurface (+ OmniPBR) materials from IFC styles
+  Prototypes                          Scope             shared meshes for instanceable bodies
 ```
 
-### Automatic dependency installation fails
+A property is one typed attribute:
 
-Run the printed `pip install` command manually in the same Python environment, then retry
-the conversion. If the environment is locked down, use `--no-auto-install` and install
-dependencies through your normal package management workflow.
-
-### Some IFC elements are skipped
-
-Some source models contain geometry that IfcOpenShell cannot tessellate. By default, IfcUSD
-continues converting the rest of the model and reports skipped items in the summary.
-
-Use:
-
-```powershell
-ifcusd convert .\model.ifc .\model.usd --verbose
+```usda
+custom uniform double ifc:qto:Qto_WallBaseQuantities:Length = 5000 (
+    customData = { string ifcType = "IfcQuantityLength"; string ifcUnit = "MILLIMETRE"; string ifcValueType = "IfcLengthMeasure" }
+    displayGroup = "Qto_WallBaseQuantities"
+    displayName = "Length"
+)
 ```
 
-To fail immediately on the first geometry/write problem:
+See [docs/schema-mapping.md](docs/schema-mapping.md) for every rule.
 
-```powershell
-ifcusd convert .\model.ifc .\model.usd --fail-on-geometry-error
+## Command reference
+
+| Command | Purpose |
+| --- | --- |
+| `ifcusd convert IN OUT [options]` | Convert `.ifc`, `.ifczip` or `.ifcx` to `.usd`, `.usda`, `.usdc` or `.usdz` |
+| `ifcusd validate FILE.usd [--source IN.ifc] [--json R.json]` | OpenUSD validators, structural checks and, with `--source`, a completeness check against the IFC |
+| `ifcusd info IN [--json]` | Schema, header, units, georeferencing and contents of an IFC/IFCX file |
+| `ifcusd schema [--print]` | Path of the USD schema plugin (for `PXR_PLUGINPATH_NAME`) |
+
+Main `convert` options (run `ifcusd convert --help` for all):
+
+| Option | Effect |
+| --- | --- |
+| `--profile generic\|omniverse\|unity` | Target preset ([details](docs/omniverse-and-unity.md)) |
+| `--up-axis Y\|Z`, `--meters-per-unit 0.01` | Stage orientation and units (geometry is scaled; properties keep IFC units) |
+| `--naming name_guid\|guid\|name` | Prim naming (default `name_guid`, stable across re-exports) |
+| `--include-type IfcWall`, `--exclude-type IfcFurniture` | Element filters (subclasses included; spatial structure is kept) |
+| `--threads N` | Tessellation threads; output does not depend on it |
+| `--no-instancing`, `--no-curves`, `--spaces hidden\|visible\|skip`, `--openings`, `--uvs`, `--world-coords` | Geometry choices |
+| `--linear-deflection M`, `--angular-deflection RAD` | Tessellation tolerance |
+| `--no-properties`, `--no-quantities`, `--no-materials`, `--no-relationships`, `--no-owner-history`, `--no-type-inheritance`, `--no-metadata` | Leave out data groups (reported as `skipped`) |
+| `--all-relationship-prims` | Also write natively mapped relationships as prims (complete relationship graph with GUIDs) |
+| `--material-model preview\|preview+mdl` | UsdPreviewSurface only, or with OmniPBR |
+| `--layer extra.ifcx` | Additional IFC5 layers composed on top of the input |
+| `--report R.json`, `--metadata-json M.json` | Write the conversion report / metadata sidecar |
+| `--validate`, `--strict` | Validate after writing; with `--strict`, exit code 1 unless conversion was complete |
+
+Exit codes: `0` success, `1` completed with problems, `2` usage or environment
+error, `3` conversion failed.
+
+## Python API
+
+```python
+from ifcusd import ConversionOptions, IfcToUsdConverter, convert, validate_usd
+import ifcusd.schema
+
+options = ConversionOptions.for_profile(
+    "unity",
+    meters_per_unit=1.0,
+    include_types=("IfcWall", "IfcSlab"),
+    progress=lambda stage, fraction: print(stage, fraction),
+)
+result = IfcToUsdConverter(options).convert(
+    "model.ifc", "model.usdz", report_path="report.json", metadata_json_path="model.ifcusd.json"
+)
+result.report.coverage          # per IFC class: inFile / prim / native / attributes / filtered / skipped / missing
+result.report.geometry_errors   # products whose geometry failed
+result.report.products_without_geometry
+
+convert("hello-wall.ifcx", "hello-wall.usda", layers=["hello-wall-add-fire-rating-30.ifcx"])  # IFC5 layers
+
+ifcusd.schema.register()        # before opening stages, for HasAPI("IfcEntityAPI") etc.
 ```
 
-### The USD output is mesh geometry, not parametric BIM solids
+## Reproducibility and verification
 
-That is expected. IfcUSD writes tessellated USD mesh geometry plus IFC metadata. It does not
-write native parametric IFC solids.
+* Same input + options + tool versions ⇒ byte-identical `.usda`/`.usdc`, for any
+  thread count (covered by tests).
+* `customLayerData.ifcusd` records the source SHA-256, IFC schema, IfcUSD,
+  IfcOpenShell and OpenUSD versions, the mapping version and all options.
+* `ifcusd validate out.usd --source model.ifc` checks that every object
+  definition (by GlobalId) and every property and quantity value of the source
+  is present, in addition to OpenUSD's validators and mesh and relationship
+  integrity checks.
+
+## Performance
+
+On a laptop-class Windows machine with IfcOpenShell 0.9 and OpenUSD 26.08: the
+bundled samples convert in under a second; the 5.5 MB *IFC Hero Model* in about
+9 s (tessellation-bound); a generated model with 3,000 walls and 36,000
+property and quantity values in 5.4 s. Semantic data is written at about
+1 ms per element, so models with 100,000 elements convert in a few minutes
+plus tessellation time. Tessellation runs on all cores by default.
+
+## Limitations
+
+* USD receives tessellated geometry. Parametric IFC geometry is not
+  round-tripped; the output links back to the source by checksum, GlobalId and
+  STEP id.
+* Geometry IfcOpenShell cannot tessellate (e.g. some IFC4X3 alignment curve
+  types) is listed in the report, not converted; the product's data is still
+  written.
+* IFC presentation styles are mapped to PBR approximately; the original values
+  are kept on each material.
+* ifcXML input is not supported by current IfcOpenShell releases.
+
+Details in [docs/schema-mapping.md § 7](docs/schema-mapping.md#7-known-limitations).
+
+## Documentation
+
+* [IFC and OpenUSD: schema comparison and mapping specification](docs/schema-mapping.md)
+* [Existing IFC → USD methods and comparison](docs/related-work.md)
+* [Using the output in NVIDIA Omniverse and Unity](docs/omniverse-and-unity.md)
+* [Changelog](CHANGELOG.md)
+
+## Development
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest -q          # 89 tests: IFC2X3/IFC4/IFC4X3 fixtures, IFC5, CLI, determinism, geometry accuracy
+python -m ruff check . && python -m ruff format --check .
+```
+
+```text
+src/ifcusd/
+  converter.py      orchestration, report and coverage
+  ifc/              reading IFC: schema fallback, units, values, properties, styles, structure planning, tessellation
+  ifcx/             IFC5: layer composition and conversion
+  usd/              Sdf-level authoring: scene, geometry, materials
+  schema/           codeless USD schema plugin (plugInfo.json, generatedSchema.usda, schema.usda)
+  validate.py       validation and completeness checks
+  cli.py            command line
+integrations/unity/ Unity editor script and runtime component for the metadata sidecar
+tests/              pytest suite (models are generated with IfcOpenShell's API)
+ifc/                sample IFC files
+```
+
+## Upgrading from 0.1
+
+* The root prim is now `/World` (use `--root IFC` for the old name).
+* `metersPerUnit` now describes the geometry. 0.1 wrote the IFC length unit
+  (e.g. 0.001 for millimetre projects) while the geometry was in metres, so
+  models appeared 1,000 times too small.
+* Meshes are in local coordinates under relative transforms, instead of baked
+  world coordinates (`--world-coords` restores the old layout).
+* The `ifc:metadata` JSON blob is replaced by typed attributes and USD
+  relationships. Property and quantity names keep the `ifc:pset:<Set>:<Prop>` /
+  `ifc:qto:<Set>:<Qty>` pattern.
+* Missing dependencies are no longer pip-installed automatically; pass
+  `--install-deps` to opt in. The 0.1 flags `--local-coords`,
+  `--fail-on-geometry-error` and `--no-auto-install` are still accepted.
+
+## Citation
+
+If you use IfcUSD in research, please cite it using [CITATION.cff](CITATION.cff).
 
 ## License
 
-This project is configured as MIT licensed in `pyproject.toml`.
+MIT, see [LICENSE](LICENSE).

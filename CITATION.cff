@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use IfcUSD in your research, please cite it as below."
+title: "IfcUSD: complete and reproducible conversion of IFC building models to OpenUSD"
+version: 1.0.0
+date-released: 2026-10-20
+license: MIT
+repository-code: "https://github.com/isaddiq/ifcusd"
+type: software
+authors:
+  - name: "IfcUSD contributors"
+keywords:
+  - IFC
+  - BIM
+  - OpenUSD
+  - digital twin
+  - interoperability

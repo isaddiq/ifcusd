@@ -1,0 +1,156 @@
+#usda 1.0
+(
+    """IfcUSD schema: IFC (ISO 16739) data on OpenUSD prims.
+
+    This is the source description of the schema. It is codeless: no C++ or
+    Python classes are generated, the schema is registered purely through
+    plugInfo.json and generatedSchema.usda in this directory. Point
+    PXR_PLUGINPATH_NAME at this directory (or call ifcusd.schema.register())
+    to make OpenUSD, usdview and NVIDIA Omniverse aware of it.
+
+    Files written by IfcUSD do not require the schema to be loaded: every
+    property is authored with an explicit type, and unknown API schemas are
+    ignored by OpenUSD. Loading it adds fallback values, documentation and
+    schema-aware queries such as prim.HasAPI("IfcEntityAPI").
+
+    Naming rules (see docs/schema-mapping.md):
+      * EXPRESS attribute Name    -> ifc:<lowerFirst(Name)>      e.g. GlobalId -> ifc:globalId
+      * property  P in set S      -> ifc:pset:<S>:<P>
+      * quantity  Q in set S      -> ifc:qto:<S>:<Q>
+      * original IFC names        -> displayName / displayGroup metadata
+    """
+    subLayers = [
+        @usd/schema.usda@
+    ]
+)
+
+over "GLOBAL" (
+    customData = {
+        string libraryName = "ifcUsd"
+        string libraryPath = "ifcusd"
+        string libraryPrefix = "IfcUsd"
+        bool skipCodeGeneration = true
+    }
+) {
+}
+
+class "IfcFileAPI" (
+    inherits = </APISchemaBase>
+    doc = "Provenance of an IFC dataset: STEP header, schema, units and source checksum. Applied to the stage's default prim."
+    customData = {
+        token apiSchemaType = "singleApply"
+    }
+)
+{
+    uniform token ifc:file:schema (doc = "IFC schema used to read the file, e.g. IFC2X3, IFC4, IFC4X3_ADD2 or IFC5.")
+    uniform string ifc:file:schemaIdentifier (doc = "Schema identifier exactly as declared in the file header.")
+    uniform string ifc:file:compatibilitySchema (doc = "Set when the declared schema was read with the closest supported schema.")
+    uniform string ifc:file:name (doc = "FILE_NAME.name")
+    uniform string ifc:file:timeStamp (doc = "FILE_NAME.time_stamp")
+    uniform string[] ifc:file:author (doc = "FILE_NAME.author")
+    uniform string[] ifc:file:organization (doc = "FILE_NAME.organization")
+    uniform string ifc:file:preprocessorVersion (doc = "FILE_NAME.preprocessor_version")
+    uniform string ifc:file:originatingSystem (doc = "FILE_NAME.originating_system")
+    uniform string ifc:file:authorization (doc = "FILE_NAME.authorization")
+    uniform string[] ifc:file:description (doc = "FILE_DESCRIPTION.description, including the model view definition.")
+    uniform string ifc:file:implementationLevel (doc = "FILE_DESCRIPTION.implementation_level")
+    uniform string ifc:file:sha256 (doc = "SHA-256 of the source file, for reproducibility.")
+    uniform double ifc:units:lengthScale = 1 (doc = "Metres per IFC project length unit. Property values keep project units; geometry is in stage units.")
+}
+
+class "IfcGeoreferenceAPI" (
+    inherits = </APISchemaBase>
+    doc = "IFC georeferencing (IfcMapConversion / IfcProjectedCRS and IfcSite reference location)."
+    customData = {
+        token apiSchemaType = "singleApply"
+    }
+)
+{
+    uniform token ifc:geo:conversionClass (doc = "IFC class of the coordinate operation, e.g. IfcMapConversion.")
+    uniform double ifc:geo:eastings
+    uniform double ifc:geo:northings
+    uniform double ifc:geo:orthogonalHeight
+    uniform double ifc:geo:xAxisAbscissa
+    uniform double ifc:geo:xAxisOrdinate
+    uniform double ifc:geo:scale
+    uniform string ifc:geo:crs:name (doc = "IfcProjectedCRS.Name, typically an EPSG code.")
+    uniform string ifc:geo:crs:description
+    uniform string ifc:geo:crs:geodeticDatum
+    uniform string ifc:geo:crs:verticalDatum
+    uniform string ifc:geo:crs:mapProjection
+    uniform string ifc:geo:crs:mapZone
+    uniform string ifc:geo:crs:mapUnit
+    uniform double ifc:geo:refLatitude (doc = "IfcSite.RefLatitude in decimal degrees.")
+    uniform double ifc:geo:refLongitude (doc = "IfcSite.RefLongitude in decimal degrees.")
+    uniform double ifc:geo:refElevation (doc = "IfcSite.RefElevation in metres.")
+    uniform double2 ifc:geo:trueNorth (doc = "Direction of true north in the project XY plane.")
+}
+
+class "IfcEntityAPI" (
+    inherits = </APISchemaBase>
+    doc = """Identity and attributes of the IFC entity instance a prim represents.
+
+    Explicit EXPRESS attributes are written as ifc:<lowerFirst(Name)>. Those
+    declared here are common to most entities; class-specific attributes are
+    written in the same namespace. Entity-valued attributes become USD
+    relationships when the referenced entity has a prim, otherwise canonical
+    JSON strings."""
+    customData = {
+        token apiSchemaType = "singleApply"
+    }
+)
+{
+    uniform token ifc:class (doc = "IFC entity class, e.g. IfcWall.")
+    uniform string ifc:globalId (doc = "IfcRoot.GlobalId (22-character base64 GUID).")
+    uniform int ifc:stepId (doc = "STEP instance id in the source file (file-specific).")
+    uniform string ifc:name (doc = "Name attribute.")
+    uniform string ifc:description (doc = "Description attribute.")
+    uniform string ifc:objectType (doc = "IfcObject.ObjectType")
+    uniform string ifc:tag (doc = "IfcElement.Tag")
+    uniform string ifc:longName (doc = "LongName attribute.")
+    uniform token ifc:predefinedType (doc = "PredefinedType enumeration.")
+    uniform token ifc:parentRelationship (
+        allowedTokens = ["root", "aggregates", "nests", "contains", "voids", "projects", "adheres", "port", "unassigned", "none"]
+        doc = "IFC relationship represented by this prim's position in the namespace hierarchy."
+    )
+    rel ifc:isTypedBy (doc = "IfcRelDefinesByType: the type object prim.")
+    rel ifc:hasMaterial (doc = "IfcRelAssociatesMaterial: IFC material definition prims.")
+    rel ifc:hasClassification (doc = "IfcRelAssociatesClassification")
+    rel ifc:hasDocument (doc = "IfcRelAssociatesDocument")
+    rel ifc:hasLibrary (doc = "IfcRelAssociatesLibrary")
+    rel ifc:hasApproval (doc = "IfcRelAssociatesApproval")
+    rel ifc:hasConstraint (doc = "IfcRelAssociatesConstraint")
+    rel ifc:hasProfile (doc = "IfcRelAssociatesProfileDefinition / IfcRelAssociatesProfileProperties")
+    rel ifc:fills (doc = "IfcRelFillsElement: the opening this element fills.")
+    rel ifc:ownerHistory (doc = "IfcRoot.OwnerHistory")
+}
+
+class "IfcPropertySetAPI" (
+    inherits = </APISchemaBase>
+    doc = """One IFC property set (IfcPropertySet or predefined property set).
+
+    Multiple-apply: the instance name is the sanitized set name and every
+    property is written as ifc:pset:<instance>:<property>, with displayGroup
+    holding the original set name and displayName the original property
+    name. Set-level data is kept in prim customData under ifc:propertySets."""
+    customData = {
+        token apiSchemaType = "multipleApply"
+        token propertyNamespacePrefix = "ifc:pset"
+    }
+)
+{
+}
+
+class "IfcQuantitySetAPI" (
+    inherits = </APISchemaBase>
+    doc = """One IFC quantity set (IfcElementQuantity).
+
+    Multiple-apply: quantities are written as ifc:qto:<instance>:<quantity>
+    in project units, with the unit in customData.ifcUnit."""
+    customData = {
+        token apiSchemaType = "multipleApply"
+        token propertyNamespacePrefix = "ifc:qto"
+    }
+)
+{
+}

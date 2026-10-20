@@ -4,29 +4,34 @@ build-backend = "hatchling.build"
 
 [project]
 name = "IfcUSD"
-version = "0.1.0"
-description = "Convert IFC models to OpenUSD using IfcOpenShell geometry and metadata."
+dynamic = ["version"]
+description = "Complete, reproducible conversion of IFC (IFC2X3, IFC4, IFC4X3, IFC5) building models to OpenUSD for NVIDIA Omniverse, Unity and any OpenUSD pipeline."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
   { name = "OpenBIM2OpenUSD contributors" }
 ]
-keywords = ["ifc", "openbim", "openusd", "usd", "ifcopenshell", "bim"]
+keywords = ["ifc", "openbim", "bim", "openusd", "usd", "ifcopenshell", "omniverse", "unity", "digital twin", "ifc5"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
-  "Topic :: Multimedia :: Graphics :: 3D Modeling",
-  "Topic :: Scientific/Engineering",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Graphics :: 3D Modeling",
+  "Topic :: Scientific/Engineering",
+  "Typing :: Typed",
 ]
 dependencies = [
   "ifcopenshell>=0.8.0",
   "usd-core>=24.8",
+  "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
@@ -35,15 +40,41 @@ dev = [
   "ruff>=0.6",
 ]
 
+[project.urls]
+Homepage = "https://github.com/isaddiq/ifcusd"
+Documentation = "https://github.com/isaddiq/ifcusd/tree/main/docs"
+Issues = "https://github.com/isaddiq/ifcusd/issues"
+Changelog = "https://github.com/isaddiq/ifcusd/blob/main/CHANGELOG.md"
+
 [project.scripts]
 ifcusd = "ifcusd.cli:main"
+
+[tool.hatch.version]
+path = "src/ifcusd/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ifcusd"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/ifcusd",
+  "tests",
+  "docs",
+  "integrations",
+  "ifc",
+  "convert_ifc_to_usd.py",
+  "README.md",
+  "CHANGELOG.md",
+  "LICENSE",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "tests"]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

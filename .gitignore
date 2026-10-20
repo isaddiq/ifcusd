@@ -12,3 +12,12 @@ venv/
 build/
 dist/
 *.egg-info/
+
+# conversion outputs
+out/
+ifc/*.usd
+ifc/*.usda
+ifc/*.usdc
+ifc/*.usdz
+ifc/*_textures/
+*.ifcusd.json
