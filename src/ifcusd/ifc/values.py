@@ -1,6 +1,6 @@
 """Conversion of IFC attribute values into USD-typed values.
 
-The mapping is fixed and documented (see docs/schema-mapping.md):
+The mapping is fixed and documented (see website/docs/reference/schema-mapping.md):
 
 =====================================  =====================
 IFC value                              USD attribute type

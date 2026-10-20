@@ -108,7 +108,7 @@ codeless set of *applied API schemas* (`IfcEntityAPI`, multiple-apply
 `IfcPropertySetAPI`/`IfcQuantitySetAPI`, `IfcFileAPI`,
 `IfcGeoreferenceAPI`). The IFC class stays data, so the same files work for
 every IFC version and remain readable without the plugin. See
-[schema-mapping.md](schema-mapping.md#4-the-ifcusd-usd-schema).
+[the mapping specification](../reference/schema-mapping.md#4-the-ifcusd-usd-schema).
 
 ### IFC5 / IFCX (buildingSMART, alpha)
 

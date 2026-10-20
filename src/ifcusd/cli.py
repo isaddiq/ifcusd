@@ -146,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common(validate)
 
     info = subparsers.add_parser("info", help="Summarize an IFC file (schema, header, units, contents).")
-    info.add_argument("input", type=Path)
+    info.add_argument("input", type=Path, help="Input .ifc, .ifczip or .ifcx file.")
     info.add_argument("--json", action="store_true", help="Print JSON instead of text.")
     _add_common(info)
 

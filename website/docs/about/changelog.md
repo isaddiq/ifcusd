@@ -47,9 +47,12 @@ Mapping version 1.0.
 - Deterministic, byte-identical output for any thread count; provenance
   (source SHA-256, tool versions, options) in `customLayerData`.
 - Test suite generating IFC2X3/IFC4/IFC4X3 fixtures, geometry accuracy and
-  determinism tests; CI on Linux and Windows for Python 3.10–3.13.
-- Documentation: schema comparison and mapping specification, survey of
-  existing methods, Omniverse/Unity guide.
+  determinism tests; CI on Linux and Windows for Python 3.10–3.14.
+- Documentation website (static, MkDocs Material) in `website/`, published to
+  GitHub Pages by a workflow: installation, quick start, tutorial, CLI and
+  Python guides, recipes, troubleshooting, the IFC ↔ USD mapping
+  specification, the USD schema, file formats, an API reference generated
+  from docstrings, and a survey of existing methods.
 
 ### Changed
 

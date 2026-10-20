@@ -34,7 +34,18 @@ IFCX_EXTENSIONS = (".ifcx",)
 
 @dataclass(frozen=True)
 class ConversionResult:
-    """Outcome of a conversion. ``report`` holds the full details."""
+    """Outcome of a conversion.
+
+    Attributes:
+        input_path: The converted source file.
+        output_path: The written USD file.
+        elements_seen: Number of products that received geometry.
+        meshes_written: Number of meshes written (inline meshes plus instances).
+        spatial_prims_written: Number of spatial structure prims (sites, buildings, storeys, spaces...).
+        skipped_geometry: ``"<IfcClass> #<id>: <reason>"`` for each element whose geometry failed.
+        report: Full [`ConversionReport`][ifcusd.report.ConversionReport] (counts,
+            coverage, warnings, timings, provenance).
+    """
 
     input_path: Path
     output_path: Path
@@ -46,7 +57,20 @@ class ConversionResult:
 
 
 class IfcToUsdConverter:
-    """Converts IFC (IFC2X3, IFC4, IFC4X3 and, experimentally, IFC5/IFCX) to OpenUSD."""
+    """Converts IFC (IFC2X3, IFC4, IFC4X3 and, experimentally, IFC5/IFCX) to OpenUSD.
+
+    Args:
+        options: Conversion options; defaults to ``ConversionOptions()``.
+
+    Example:
+        ```python
+        from ifcusd import ConversionOptions, IfcToUsdConverter
+
+        converter = IfcToUsdConverter(ConversionOptions.for_profile("unity"))
+        for name in ("architecture", "structure", "mep"):
+            converter.convert(f"{name}.ifc", f"{name}.usdz", report_path=f"{name}.report.json")
+        ```
+    """
 
     def __init__(self, options: ConversionOptions | None = None) -> None:
         self.options = options or ConversionOptions()
@@ -60,6 +84,27 @@ class IfcToUsdConverter:
         metadata_json_path: str | os.PathLike[str] | None = None,
         layers: list[str | os.PathLike[str]] | None = None,
     ) -> ConversionResult:
+        """Convert one file.
+
+        Args:
+            input_path: ``.ifc``, ``.ifczip`` or ``.ifcx`` file.
+            output_path: ``.usd``, ``.usda``, ``.usdc`` or ``.usdz`` file. Parent
+                folders are created.
+            report_path: Also write the conversion report as JSON here.
+            metadata_json_path: Also write the metadata sidecar (used by the
+                Unity integration) here.
+            layers: Additional IFC5 (``.ifcx``) layers composed on top of the
+                input, in order. Only valid for IFCX input.
+
+        Returns:
+            The [`ConversionResult`][ifcusd.converter.ConversionResult].
+
+        Raises:
+            InputError: The input is missing, unreadable or has an unsupported format.
+            UnsupportedSchemaError: The IFC schema cannot be read and fallback is off or impossible.
+            OutputError: The output extension is unsupported or the file cannot be written.
+            GeometryError: Geometry failed and ``ignore_geometry_errors`` is ``False``.
+        """
         source = Path(input_path)
         target = Path(output_path)
         if target.suffix.lower() not in OUTPUT_EXTENSIONS:
@@ -275,7 +320,29 @@ def convert_file(
     options: ConversionOptions | None = None,
     **kwargs: Any,
 ) -> ConversionResult:
-    """Convert ``input_path`` (IFC/IFCZIP/IFCX) to ``output_path`` (.usd/.usda/.usdc/.usdz)."""
+    """Convert an IFC file to USD in one call.
+
+    Equivalent to ``IfcToUsdConverter(options).convert(input_path, output_path, **kwargs)``;
+    also available as ``ifcusd.convert``.
+
+    Args:
+        input_path: ``.ifc``, ``.ifczip`` or ``.ifcx`` file.
+        output_path: ``.usd``, ``.usda``, ``.usdc`` or ``.usdz`` file.
+        options: Conversion options; defaults to ``ConversionOptions()``.
+        **kwargs: ``report_path``, ``metadata_json_path`` and ``layers``, see
+            [`IfcToUsdConverter.convert`][ifcusd.converter.IfcToUsdConverter.convert].
+
+    Returns:
+        The [`ConversionResult`][ifcusd.converter.ConversionResult].
+
+    Example:
+        ```python
+        from ifcusd import convert
+
+        result = convert("model.ifc", "model.usdc")
+        assert result.report.complete
+        ```
+    """
     return IfcToUsdConverter(options).convert(input_path, output_path, **kwargs)
 
 

@@ -1,23 +1,72 @@
+# ---------------------------------------------------------------------------
+# Only source, docs, tests, samples and CI configuration belong in git.
+# Everything below is generated locally and must not be committed.
+# ---------------------------------------------------------------------------
+
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
+*$py.class
 
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# Packaging and build outputs (releases are built by the publish workflow)
+build/
+dist/
+package/
+wheels/
+*.egg-info/
+*.egg
+.eggs/
+pip-wheel-metadata/
+
+# Test, lint, type-check and coverage results
 .pytest_cache/
 .pytest-basetemp/
 .ruff_cache/
 .mypy_cache/
+.pyright/
+.tox/
+.nox/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+junit*.xml
+test-results/
 
-.venv/
-venv/
+# Website build output (built and deployed by .github/workflows/docs.yml)
+site/
+_site/
 
-build/
-dist/
-*.egg-info/
-
-# conversion outputs
+# Conversion outputs, reports and sidecars created while trying the tool
 out/
-ifc/*.usd
-ifc/*.usda
-ifc/*.usdc
-ifc/*.usdz
-ifc/*_textures/
+output/
+*.usd
+*.usda
+*.usdc
+*.usdz
+*_textures/
 *.ifcusd.json
+report.json
+*.report.json
+# ...except the USD schema plugin that ships with the package
+!src/ifcusd/schema/resources/*.usda
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local assistant settings
+.claude/settings.local.json

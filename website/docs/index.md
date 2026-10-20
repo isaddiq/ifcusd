@@ -1,0 +1,198 @@
+---
+title: IfcUSD — IFC to OpenUSD without losing the BIM
+description: Convert IFC2X3, IFC4, IFC4X3 and IFC5 building models to OpenUSD for NVIDIA Omniverse, Unity and any OpenUSD pipeline, with every property, type, material and relationship preserved.
+hide:
+  - navigation
+  - toc
+---
+
+<div class="ifc-hero" markdown>
+
+<div markdown>
+
+<h1>IFC to <span class="ifc-gradient">OpenUSD</span>,<br>without losing the BIM.</h1>
+
+<p class="ifc-hero__lead">
+IfcUSD is a Python package and command-line tool. It converts building
+models in every IFC version to OpenUSD, including geometry, spatial
+structure, every attribute, property and quantity, types, materials,
+classifications, groups and relationships, and proves that nothing was
+lost.
+</p>
+
+[Get started :material-arrow-right:](getting-started/installation.md){ .md-button .md-button--primary }
+[Quick start](getting-started/quickstart.md){ .md-button }
+[:fontawesome-brands-github: GitHub](https://github.com/isaddiq/ifcusd){ .md-button }
+
+<div class="ifc-pills">
+<span>IFC2X3</span><span>IFC4</span><span>IFC4X3</span><span>IFC5 · IFCX</span>
+<span>NVIDIA Omniverse</span><span>Unity 6</span><span>Python 3.10 – 3.14</span><span>MIT</span>
+</div>
+
+</div>
+
+<div class="ifc-terminal">
+<div class="ifc-terminal__bar"><i></i><i></i><i></i></div>
+<pre><code><span class="t-prompt">$</span> pip install "git+https://github.com/isaddiq/ifcusd.git"
+<span class="t-prompt">$</span> ifcusd convert model.ifc model.usdc --validate
+<span class="t-dim">input   model.ifc  [IFC4]
+output  model.usdc  [profile: generic]</span>
+prims 84 | elements 15 | spatial 7 | types 16 | relationships 57
+geometry: meshes 14 | triangles 1167 | materials 10
+data: property sets 20 | properties 43 | quantities 25
+coverage of 117 IfcRoot instances: prim 40, native 57,
+         attributes 20, filtered 0, skipped 0, <span class="t-ok">missing 0</span>
+<span class="t-ok">completed in 0.31s (complete)</span>
+model.usdc: <span class="t-ok">OK</span> (0 errors, 0 warnings)
+  missingObjects: <span class="t-ok">0</span>   missingPropertyValues: <span class="t-ok">0</span></code></pre>
+</div>
+
+</div>
+
+<h2 class="ifc-section-title">Why IfcUSD</h2>
+<p class="ifc-section-lead">Most IFC → USD routes keep the geometry and drop the building information. IfcUSD keeps all of it, in typed, documented USD that every tool can read.</p>
+
+<div class="grid cards" markdown>
+
+-   :material-database-check:{ .lg .middle } __Complete by construction__
+
+    ---
+
+    Every `IfcRoot` instance is accounted for in a coverage report, and
+    `ifcusd validate --source` re-reads the IFC to prove that every object and
+    property value arrived.
+
+    [:octicons-arrow-right-24: Reports and validation](guide/validation.md)
+
+-   :material-format-list-bulleted-type:{ .lg .middle } __Typed, not stringified__
+
+    ---
+
+    Booleans, integers, measures with units, enumerations with allowed
+    values, lists, tables, bounded and complex properties. Original IFC
+    names stay in `displayName`.
+
+    [:octicons-arrow-right-24: What gets written](guide/output.md)
+
+-   :material-history:{ .lg .middle } __Every IFC version__
+
+    ---
+
+    IFC2X3, IFC4 and IFC4X3 natively; IFC4X1, IFC4X2, IFC4X3-TC1 and
+    IFC4-ADD2 through schema fallback with loss reporting; IFC5 (`.ifcx`)
+    with layer composition; `.ifczip`.
+
+    [:octicons-arrow-right-24: IFC5 support](guide/ifc5.md)
+
+-   :material-cube-outline:{ .lg .middle } __A real USD schema__
+
+    ---
+
+    A versioned, codeless USD schema (`IfcEntityAPI`, `IfcPropertySetAPI`,
+    `IfcQuantitySetAPI`…) documents the mapping. It is optional at runtime,
+    so files open everywhere.
+
+    [:octicons-arrow-right-24: USD schema](reference/usd-schema.md)
+
+-   :material-target:{ .lg .middle } __Accurate geometry__
+
+    ---
+
+    Local meshes under double-precision transforms, native instancing of
+    type geometry, per-face materials. Matches IfcOpenShell's world
+    geometry to 5 × 10⁻⁵ m.
+
+    [:octicons-arrow-right-24: Mapping specification](reference/schema-mapping.md)
+
+-   :material-repeat:{ .lg .middle } __Reproducible__
+
+    ---
+
+    Byte-identical output for any thread count. Source SHA-256, tool versions
+    and options are recorded in every file. Suitable for research and audit
+    trails.
+
+    [:octicons-arrow-right-24: Reproducibility](reference/schema-mapping.md#5-reproducibility)
+
+</div>
+
+<h2 class="ifc-section-title">How it works</h2>
+<p class="ifc-section-lead">The scene is planned before anything is written, so paths are stable and the output does not depend on processing order.</p>
+
+<div class="ifc-pipeline">
+<div><strong>Read</strong><p>IfcOpenShell opens IFC-SPF or ifcZIP in any schema version, with automatic fallback for unknown identifiers.</p></div>
+<div><strong>Plan</strong><p>Every entity gets a parent, a USD type, a model kind and a stable name; relationships are classified as native or prim.</p></div>
+<div><strong>Write</strong><p>Typed attributes, property sets, relationships and collections, then multithreaded tessellation and instancing.</p></div>
+<div><strong>Verify</strong><p>Coverage report, OpenUSD validators and a round-trip completeness check against the source IFC.</p></div>
+</div>
+
+<h2 class="ifc-section-title">Built for your target</h2>
+
+=== "NVIDIA Omniverse"
+
+    ```bash
+    ifcusd convert model.ifc model.usdc --profile omniverse
+    ```
+
+    OmniPBR (MDL) and UsdPreviewSurface materials, instanceable prototypes for
+    repeated type geometry, and Replicator-ready semantic labels by IFC class.
+    IFC data appears as prim properties.
+    [Omniverse guide :octicons-arrow-right-24:](guide/omniverse-and-unity.md#nvidia-omniverse)
+
+=== "Unity 6"
+
+    ```bash
+    ifcusd convert model.ifc model.usdz --profile unity --metadata-json model.ifcusd.json
+    ```
+
+    Y-up, importer-safe content (meshes, transforms, UsdPreviewSurface) and a
+    metadata sidecar that the bundled editor script attaches to the imported
+    GameObjects.
+    [Unity guide :octicons-arrow-right-24:](guide/omniverse-and-unity.md#unity-unity-6-20231)
+
+=== "Python"
+
+    ```python
+    from ifcusd import ConversionOptions, convert, validate_usd
+
+    result = convert("model.ifc", "model.usdc", ConversionOptions.for_profile("omniverse"))
+    assert result.report.complete
+    assert validate_usd("model.usdc", source="model.ifc").ok
+    ```
+
+    [Python API :octicons-arrow-right-24:](guide/python-api.md)
+
+=== "Any OpenUSD tool"
+
+    ```bash
+    ifcusd convert model.ifc model.usda
+    ```
+
+    Only core OpenUSD schemas, so usdview, Blender, Houdini, Maya and Apple
+    tools open the output directly.
+    [What gets written :octicons-arrow-right-24:](guide/output.md)
+
+<h2 class="ifc-section-title">What you get</h2>
+
+| IFC | OpenUSD |
+| --- | --- |
+| Spatial structure (`IfcProject` → `IfcSite` → `IfcBuilding` → `IfcBuildingStorey` …) | `Xform` hierarchy with model kinds and relative placements |
+| Elements and their representations | `Xform` + `Body` `Mesh`, `Axis` `BasisCurves`; instanceable prototypes |
+| Attributes (`GlobalId`, `Name`, `PredefinedType`, …) | `ifc:globalId`, `ifc:name`, `ifc:predefinedType` (`IfcEntityAPI`) |
+| Property sets and quantities | `ifc:pset:<Set>:<Property>`, `ifc:qto:<Set>:<Quantity>` with units |
+| Types, materials, classifications, documents | `rel ifc:isTypedBy`, `ifc:hasMaterial`, `ifc:hasClassification`, … |
+| Groups, systems, zones, layers | `UsdCollectionAPI` collections |
+| Other relationships | relationship prims under `/World/IfcData/Relationships` |
+| Surface styles | `UsdPreviewSurface` (+ OmniPBR) materials |
+| Units, georeferencing, header | `ifc:units:*`, `ifc:geo:*`, `ifc:file:*` on `/World` |
+
+<div class="ifc-cta" markdown>
+
+## Convert your first model in two minutes
+
+Install with pip, run one command, open the result in Omniverse, Unity or usdview.
+
+[Install IfcUSD](getting-started/installation.md){ .md-button .md-button--primary }
+[Follow the tutorial](getting-started/tutorial.md){ .md-button }
+
+</div>

@@ -28,6 +28,8 @@ _CORE_SHADERS = ("'UsdPreviewSurface'", "'UsdUVTexture'", "'UsdPrimvarReader_")
 
 @dataclass
 class ValidationIssue:
+    """One finding; ``severity`` is ``error``, ``warning`` or ``info``."""
+
     severity: str  # "error" | "warning" | "info"
     code: str
     message: str
@@ -36,6 +38,8 @@ class ValidationIssue:
 
 @dataclass
 class ValidationReport:
+    """Result of [`validate_usd`][ifcusd.validate.validate_usd]: issues plus statistics."""
+
     usd_path: str
     source_path: str | None = None
     issues: list[ValidationIssue] = field(default_factory=list)
@@ -87,6 +91,28 @@ def validate_usd(
     source: str | Path | None = None,
     run_usd_validators: bool = True,
 ) -> ValidationReport:
+    """Validate a USD file written by IfcUSD.
+
+    Args:
+        usd_path: The ``.usd``/``.usda``/``.usdc``/``.usdz`` file.
+        source: The original IFC file. When given, every object definition (by
+            GlobalId) and every property and quantity value of the source must
+            be present in the USD file.
+        run_usd_validators: Run OpenUSD's ``UsdValidation`` validators (USD 24.11+).
+
+    Returns:
+        A [`ValidationReport`][ifcusd.validate.ValidationReport]; ``report.ok`` is
+        ``False`` when any error was found.
+
+    Example:
+        ```python
+        from ifcusd import validate_usd
+
+        report = validate_usd("model.usdc", source="model.ifc")
+        for line in report.summary_lines():
+            print(line)
+        ```
+    """
     usd = import_usd()
     Usd, UsdGeom = usd.Usd, usd.UsdGeom
     report = ValidationReport(usd_path=str(usd_path), source_path=str(source) if source else None)

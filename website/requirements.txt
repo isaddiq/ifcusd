@@ -1,0 +1,5 @@
+# Build requirements for the IfcUSD documentation website (not needed to use the package).
+# MkDocs 2.0 drops the plugin system Material and mkdocstrings rely on, so stay on 1.x.
+mkdocs>=1.6,<2
+mkdocs-material>=9.5,<10
+mkdocstrings[python]>=0.27,<2

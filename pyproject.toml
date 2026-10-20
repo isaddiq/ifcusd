@@ -24,6 +24,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Multimedia :: Graphics :: 3D Modeling",
   "Topic :: Scientific/Engineering",
   "Typing :: Typed",
@@ -42,9 +43,9 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/isaddiq/ifcusd"
-Documentation = "https://github.com/isaddiq/ifcusd/tree/main/docs"
+Documentation = "https://isaddiq.github.io/ifcusd/"
 Issues = "https://github.com/isaddiq/ifcusd/issues"
-Changelog = "https://github.com/isaddiq/ifcusd/blob/main/CHANGELOG.md"
+Changelog = "https://isaddiq.github.io/ifcusd/about/changelog/"
 
 [project.scripts]
 ifcusd = "ifcusd.cli:main"
@@ -56,16 +57,17 @@ path = "src/ifcusd/_version.py"
 packages = ["src/ifcusd"]
 
 [tool.hatch.build.targets.sdist]
+# Leading slashes anchor the patterns at the repository root, so the website
+# (website/) and other folders never end up in the source distribution.
 include = [
-  "src/ifcusd",
-  "tests",
-  "docs",
-  "integrations",
-  "ifc",
-  "convert_ifc_to_usd.py",
-  "README.md",
-  "CHANGELOG.md",
-  "LICENSE",
+  "/src/ifcusd",
+  "/tests",
+  "/integrations",
+  "/ifc",
+  "/convert_ifc_to_usd.py",
+  "/README.md",
+  "/CITATION.cff",
+  "/LICENSE",
 ]
 
 [tool.pytest.ini_options]

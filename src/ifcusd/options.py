@@ -49,8 +49,69 @@ ProgressCallback = Callable[[str, float], None]
 class ConversionOptions:
     """Options controlling IFC to USD conversion.
 
-    Use :meth:`for_profile` to start from the settings tuned for a target
-    application (``"generic"``, ``"omniverse"`` or ``"unity"``).
+    Options are immutable. Start from a target preset with
+    [`for_profile`][ifcusd.options.ConversionOptions.for_profile] and override
+    individual fields, or change an existing instance with
+    [`with_changes`][ifcusd.options.ConversionOptions.with_changes].
+
+    Example:
+        ```python
+        from ifcusd import ConversionOptions
+
+        options = ConversionOptions.for_profile("omniverse", meters_per_unit=0.01, threads=8)
+        walls_only = options.with_changes(include_types=("IfcWall",))
+        ```
+
+    Attributes:
+        profile: Target preset the options were derived from: ``"generic"``,
+            ``"omniverse"`` or ``"unity"``.
+        up_axis: Stage up axis, ``"Z"`` (IFC's convention) or ``"Y"``. For
+            ``"Y"`` the root prim gets a single ``rotateX -90``; no vertex is altered.
+        meters_per_unit: Stage linear unit in metres (``0.01`` for centimetres).
+            Geometry is scaled; property values keep their IFC project units.
+        root_prim_name: Name of the root and default prim.
+        naming: Prim naming scheme: ``"name_guid"`` (default, stable across
+            re-exports), ``"guid"`` or ``"name"``.
+        include_types: Only convert elements of these IFC classes (subclasses
+            included). Spatial structure is always kept.
+        exclude_types: Skip elements of these IFC classes (subclasses included).
+        threads: Tessellation threads. Output does not depend on it.
+        use_world_coords: Bake transforms into points instead of writing
+            local meshes under transforms (disables instancing).
+        instancing: Share identical type geometry through instanceable prims.
+        include_curves: Write curve representations (axes, alignments,
+            annotations) as ``BasisCurves``.
+        include_openings: Also tessellate opening elements (written hidden).
+        spaces: Space geometry: ``"hidden"``, ``"visible"`` or ``"skip"``.
+        generate_uvs: Generate box-projected UVs (automatic for textured models).
+        double_sided: Author meshes as double-sided.
+        linear_deflection: Tessellation chord tolerance in metres
+            (IfcOpenShell default when ``None``).
+        angular_deflection: Tessellation angular tolerance in radians
+            (IfcOpenShell default when ``None``).
+        include_metadata: Write IFC data at all. ``False`` writes geometry only.
+        include_properties: Write property sets.
+        include_quantities: Write quantity sets.
+        include_materials: Write IFC material definitions (render materials
+            are always written).
+        include_relationships: Write relationship prims, classifications,
+            documents, libraries, approvals, constraints and layers.
+        relationship_prims: ``"generic"`` writes prims only for relationships
+            without a native USD form; ``"all"`` writes every relationship as
+            a prim as well (complete relationship graph).
+        include_owner_history: Write ``IfcOwnerHistory`` records.
+        inherit_type_properties: Copy type property sets onto occurrences
+            (occurrence values win per property).
+        semantic_labels: Author ``SemanticsLabelsAPI`` class labels.
+        legacy_semantics: Also author the legacy Omniverse ``SemanticsAPI``.
+        material_model: ``"preview"`` (UsdPreviewSurface) or ``"preview+mdl"``
+            (adds an OmniPBR MDL network).
+        ignore_geometry_errors: Continue when an element cannot be tessellated
+            (it is listed in the report). ``False`` raises instead.
+        schema_fallback: Read IFC schema identifiers the installed
+            IfcOpenShell does not know with the closest supported schema.
+        progress: Optional callback ``progress(stage, fraction)`` called with
+            ``stage`` in ``read``, ``semantics``, ``geometry``, ``write``, ``done``.
     """
 
     profile: str = "generic"
@@ -126,7 +187,18 @@ class ConversionOptions:
 
     @classmethod
     def for_profile(cls, profile: str = "generic", **overrides: Any) -> ConversionOptions:
-        """Return options for a target profile, with ``overrides`` applied on top."""
+        """Options tuned for a target application, with ``overrides`` applied on top.
+
+        Args:
+            profile: ``"generic"``, ``"omniverse"`` or ``"unity"``.
+            **overrides: Any [`ConversionOptions`][ifcusd.options.ConversionOptions] field.
+
+        Returns:
+            The combined options.
+
+        Raises:
+            ValueError: If the profile or an option value is invalid.
+        """
         if profile not in PROFILES:
             raise ValueError(f"profile must be one of {PROFILES}, got {profile!r}")
         values = dict(_PROFILE_DEFAULTS[profile])
@@ -148,6 +220,7 @@ class ConversionOptions:
         return self.material_model == "preview+mdl"
 
     def with_changes(self, **changes: Any) -> ConversionOptions:
+        """Copy of these options with some fields changed."""
         return replace(self, **changes)
 
     def to_dict(self) -> dict[str, Any]:

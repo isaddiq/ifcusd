@@ -27,6 +27,32 @@ COVERAGE_BUCKETS = ("prim", "native", "attributes", "filtered", "skipped", "miss
 
 @dataclass
 class ConversionReport:
+    """Everything known about one conversion; serialize it with ``to_json``.
+
+    Attributes:
+        input_path: Source file.
+        output_path: Written USD file.
+        input_format: ``IFC-SPF``, ``IFC-ZIP`` or ``IFCX``.
+        ifc_schema: Schema used to read the file (e.g. ``IFC4X3_ADD2``, ``IFC5``).
+        declared_schema: Schema identifier as declared in the file header.
+        source_sha256: SHA-256 of the source file.
+        converter_version: IfcUSD version.
+        schema_version: Version of the IFC-in-USD mapping.
+        ifcopenshell_version: IfcOpenShell version used.
+        usd_version: OpenUSD version used.
+        profile: Target profile.
+        options: All conversion options.
+        compatibility_schema: Set when the declared schema was read with the closest supported one.
+        counts: Prims, elements, meshes, instances, triangles, property sets, values...
+        coverage: Per IFC class: ``inFile`` plus how many instances ended up as
+            ``prim``, ``native``, ``attributes``, ``filtered``, ``skipped`` or ``missing``.
+        products_without_geometry: Products with a representation that produced no tessellation.
+        geometry_errors: Products whose geometry failed to convert.
+        dropped_entities: Instances the compatibility schema could not represent, by class.
+        warnings: Human-readable warnings.
+        timings: Seconds per phase (``read``, ``plan``, ``semantics``, ``geometry``, ``write``, ``total``).
+    """
+
     input_path: str
     output_path: str
     input_format: str
@@ -54,10 +80,11 @@ class ConversionReport:
 
     @property
     def complete(self) -> bool:
-        """True when nothing from the source was dropped or failed."""
+        """True when nothing from the source was dropped, failed or left unrepresented."""
         return not self.geometry_errors and not self.dropped_entities and self.missing_count == 0
 
     def coverage_totals(self) -> dict[str, int]:
+        """Coverage buckets summed over all IFC classes."""
         totals: dict[str, int] = defaultdict(int)
         for entry in self.coverage.values():
             for bucket, value in entry.items():
@@ -71,12 +98,14 @@ class ConversionReport:
         return data
 
     def to_json(self, path: str | Path | None = None) -> str:
+        """The report as indented JSON, also written to ``path`` when given."""
         text = json.dumps(self.to_dict(), indent=2, sort_keys=True, ensure_ascii=False)
         if path is not None:
             Path(path).write_text(text + "\n", encoding="utf-8")
         return text
 
     def summary_lines(self) -> list[str]:
+        """Short human-readable summary, as printed by ``ifcusd convert``."""
         counts = self.counts
         totals = self.coverage_totals()
         schema = self.ifc_schema

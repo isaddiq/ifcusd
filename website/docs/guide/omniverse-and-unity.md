@@ -78,7 +78,7 @@ ifcusd convert model.ifc model.usdz --profile unity --metadata-json model.ifcusd
 2. Copy `model.usdz` into `Assets/`. Unity converts the meshes, materials and
    hierarchy into sub-assets; drag the model into a scene.
 3. Unity's importer does not bring in custom USD attributes. To keep the IFC
-   data, copy [`integrations/unity`](../integrations/unity) into
+   data, copy [`integrations/unity`](https://github.com/isaddiq/ifcusd/tree/main/integrations/unity) into
    `Assets/IfcUSD/`, select the imported root object in the scene, and choose
    **Tools ▸ IfcUSD ▸ Attach IFC Metadata…**, picking `model.ifcusd.json`.
    Every object with IFC data gets an `IfcMetadata` component (GlobalId,
