@@ -38,7 +38,7 @@ Written by `--report FILE` or `result.report.to_json(path)`.
 {
   "complete": true,
   "ifc_schema": "IFC4",
-  "source_sha256": "a2e088d6c7a07ea7d3498ed494ae4070e9989a5ceac9eb6e2d69184a81e78e41",
+  "source_sha256": "3ff9b10bd00c7b96dded51e7ca5a6b69efbea38b049adcdd05fcd247de7e70d5",
   "counts": { "prims": 84, "elements": 15, "meshes": 14, "triangles": 1167, "propertySets": 20, "properties": 43, "quantities": 25 },
   "coverage": {
     "IfcBuilding": { "inFile": 1, "prim": 1 },
@@ -63,7 +63,7 @@ by Unity's built-in `JsonUtility`.
   "converterVersion": "1.0.0",
   "schemaVersion": "1.0",
   "source": "Architecture.ifc",
-  "sourceSha256": "a2e088d6…",
+  "sourceSha256": "3ff9b10b…",
   "ifcSchema": "IFC4",
   "usdFile": "Architecture.usdz",
   "objects": [
@@ -111,7 +111,7 @@ Every output records its origin in the root layer's `customLayerData`:
             string ifcopenshellVersion = "0.9.0.post1"
             string usdVersion = "0.26.8"
             string sourceName = "Architecture.ifc"
-            string sourceSha256 = "a2e088d6…"
+            string sourceSha256 = "3ff9b10b…"
             string profile = "generic"
             dictionary options = { … }
         }

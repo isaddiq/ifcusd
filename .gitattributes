@@ -1,0 +1,9 @@
+# IFC files are hashed (SHA-256) into every converted USD file, so they must be
+# byte-identical on every platform: always check them out with LF line endings.
+*.ifc     text eol=lf
+*.ifcx    text eol=lf
+
+# Binary USD content must never be touched.
+*.usd     binary
+*.usdc    binary
+*.usdz    binary

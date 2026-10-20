@@ -22,7 +22,7 @@ format: IFC-SPF
 schema: IFC4
 declaredSchema: IFC4
 availableSchemas: ['IFC2X3', 'IFC4', 'IFC4X3_ADD2']
-sha256: a2e088d6c7a07ea7d3498ed494ae4070e9989a5ceac9eb6e2d69184a81e78e41
+sha256: 3ff9b10bd00c7b96dded51e7ca5a6b69efbea38b049adcdd05fcd247de7e70d5
 header:
   description: ['ViewDefinition [ReferenceView_V1.2]']
   originatingSystem: SketchUp 2024 (24.0.594)
