@@ -127,6 +127,7 @@ class ConversionReport:
             (
                 f"data: property sets {counts.get('propertySets', 0)} | properties {counts.get('properties', 0)} | "
                 f"quantities {counts.get('quantities', 0)}"
+                + (f" | physics prims {counts['physicsPrims']}" if counts.get("physicsPrims") else "")
             ),
             (
                 f"coverage of {totals['inFile']} IfcRoot instances: prim {totals['prim']}, "

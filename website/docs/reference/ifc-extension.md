@@ -53,14 +53,26 @@ meshes are read, for a new element its whole subtree.
 | `KinematicEnabled` | `IfcBoolean` | | `physics:kinematicEnabled` |
 | `CollisionEnabled` | `IfcBoolean` | | any `CollisionAPI` with `physics:collisionEnabled` |
 | `CollisionApproximation` | `IfcLabel` | | `physics:approximation` (`MeshCollisionAPI`), e.g. `convexHull` |
-| `StaticFriction` | `IfcReal` | | physics material bound with purpose `physics` |
-| `DynamicFriction` | `IfcReal` | | physics material |
-| `Restitution` | `IfcReal` | | physics material |
+| `StaticFriction` | `IfcReal` | | physics material bound to the colliders with purpose `physics` |
+| `DynamicFriction` | `IfcReal` | | physics material of the colliders |
+| `Restitution` | `IfcReal` | | physics material of the colliders |
 | `Articulated` | `IfcBoolean` | | `PhysicsArticulationRootAPI` in a new element |
 | `JointCount` | `IfcInteger` | | number of `UsdPhysics` joints in a new element |
 
 Stage `kilogramsPerUnit` and `metersPerUnit` are applied before conversion to
-project units.
+project units. Friction and restitution are only read for elements that
+collide, so an opening does not inherit the physics material of its wall.
+
+`ifcusd convert` writes the set back as native `UsdPhysics` schemas:
+
+| `IfcUSD_Physics` property | `UsdPhysics` in the USD output |
+| --- | --- |
+| `Mass`, `Density`, `CenterOfMass` | `PhysicsMassAPI` on the element prim (`physics:mass`, `physics:density`, `physics:centerOfMass`) |
+| `RigidBodyEnabled`, `KinematicEnabled` | `PhysicsRigidBodyAPI` on the element prim |
+| `CollisionEnabled` | `PhysicsCollisionAPI` on each of the element's meshes |
+| `CollisionApproximation` | `PhysicsMeshCollisionAPI` (`physics:approximation`) on each mesh |
+| `StaticFriction`, `DynamicFriction`, `Restitution` | A `Material` with `PhysicsMaterialAPI` in `/World/PhysicsMaterials`, bound to the meshes for the `physics` purpose (identical materials are shared) |
+| `Articulated`, `JointCount` | Not applied: a robot's links were merged into one element, so there is no articulation to rebuild |
 
 ## `IfcUSD_Simulation`
 

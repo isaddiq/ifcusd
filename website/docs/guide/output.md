@@ -21,6 +21,7 @@ the [IFC ↔ USD mapping specification](../reference/schema-mapping.md).
     Relationships/<IfcRel class>/<relationship>
   Looks                               Scope                  render materials
   Prototypes                          Scope                  shared meshes for instancing
+  PhysicsMaterials                    Scope                  UsdPhysics materials, for models with IfcUSD_Physics
 ```
 
 * **Default prim** `/World`, so the file can be referenced as-is.

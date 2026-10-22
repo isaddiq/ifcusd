@@ -121,6 +121,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     data.add_argument("--no-semantic-labels", action="store_true", help="Do not author UsdSemantics class labels.")
     data.add_argument(
+        "--no-physics",
+        action="store_true",
+        help="Do not re-apply IfcUSD_Physics property sets as UsdPhysics schemas (off for unity).",
+    )
+    data.add_argument(
         "--material-model", choices=MATERIAL_MODELS, help="preview (UsdPreviewSurface) or preview+mdl (adds OmniPBR)."
     )
 
@@ -306,6 +311,7 @@ def _options(args: argparse.Namespace) -> ConversionOptions:
         "no_owner_history": ("include_owner_history", False),
         "no_type_inheritance": ("inherit_type_properties", False),
         "no_semantic_labels": ("semantic_labels", False),
+        "no_physics": ("physics", False),
         "strict": ("ignore_geometry_errors", False),
         "no_schema_fallback": ("schema_fallback", False),
     }

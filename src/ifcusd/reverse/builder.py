@@ -865,13 +865,15 @@ class ModelWriter:
         for record in self.records:
             if record.entity is None and not self._is_set_prim(record):
                 continue
-            sets = self._usd_sets(record)
+            if record.matched and not self.options.update_properties:
+                continue
+            existing = {}
+            if record.matched:
+                existing = {(s.name, s.is_quantity): s for s in self._ifc_sets(extractor, record.entity)}
+            sets = self._usd_sets(record, existing)
             if not sets:
                 continue
             if record.matched:
-                if not self.options.update_properties:
-                    continue
-                existing = {(s.name, s.is_quantity): s for s in self._ifc_sets(extractor, record.entity)}
                 for data in sets:
                     changed = changed_values(data, existing.get((data.name, data.is_quantity)), self._entity_for_path)
                     if changed:
@@ -979,8 +981,13 @@ class ModelWriter:
             return extractor.for_object(entity, inherit_from_type=self._inherit_type_properties)
         return []
 
-    def _usd_sets(self, record: PrimRecord) -> list[SetData]:
-        """Every set to write for a record; later sources win for the same property path."""
+    def _usd_sets(self, record: PrimRecord, source: dict[tuple[str, bool], PropertySet] | None = None) -> list[SetData]:
+        """Every set to write for a record, merged by name.
+
+        One property can arrive twice: as an ``ifc:pset`` attribute and from
+        its native USD form (``physics:mass`` for ``IfcUSD_Physics.Mass``, a
+        ``robot:`` attribute). See :meth:`_later_wins` for which is kept.
+        """
         time = self.scene.time
         sets = read_ifc_sets(record.prim, time)
         if self.options.extension_namespaces:
@@ -998,14 +1005,23 @@ class ModelWriter:
                 sets.append(simulation)
         merged: dict[tuple[str, bool], SetData] = {}
         for data in sets:
-            existing = merged.get((data.name, data.is_quantity))
-            if existing is None:
-                merged[(data.name, data.is_quantity)] = data
+            key = (data.name, data.is_quantity)
+            current = merged.get(key)
+            if current is None:
+                merged[key] = data
                 continue
-            replaced = {v.path for v in data.values}
-            existing.values = [v for v in existing.values if v.path not in replaced] + data.values
+            source_set = (source or {}).get(key)
+            source_values = (
+                {tuple(v.path): v.value.value if v.value else None for v in source_set.values} if source_set else {}
+            )
+            by_path = {v.path: v for v in current.values}
+            for value in data.values:
+                previous = by_path.get(value.path)
+                if previous is None or _later_wins(previous, value, source_values):
+                    by_path[value.path] = value
+            current.values = list(by_path.values())
             if data.origin != "ifc":
-                existing.origin = data.origin
+                current.origin = data.origin
         return list(merged.values())
 
     @staticmethod
@@ -1055,6 +1071,23 @@ class ModelWriter:
 
 
 PARENTING_CLASSES = {spec[0]: spec[2] for spec in PARENTING.values()}
+
+
+def _later_wins(previous: SetValue, value: SetValue, source: dict[tuple[str, ...], Any]) -> bool:
+    """Whether ``value`` (a native USD form) replaces ``previous`` (an ``ifc:pset`` attribute).
+
+    Equal values keep the attribute, which holds the exact IFC value (UsdPhysics
+    stores 32-bit floats). Different values mean one side was edited: if the
+    native value still equals the source IFC, the attribute was the edit and
+    is kept; otherwise the native value is (the simulation wins when both changed).
+    """
+    if value.samples or value.targets or previous.samples or previous.targets:
+        return True
+    if value.same_as(previous.value):
+        return False
+    if value.path in source and value.same_as(source[value.path]):
+        return False
+    return True
 
 
 def _plain(value: Any) -> Any:

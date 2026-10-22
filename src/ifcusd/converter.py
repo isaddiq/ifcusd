@@ -300,6 +300,8 @@ class IfcToUsdConverter:
             "prototypes": stats.prototypes,
             "curves": stats.curves,
             "materials": stats.materials,
+            "physicsPrims": stats.physics_prims,
+            "physicsMaterials": stats.physics_materials,
             "points": stats.points,
             "triangles": stats.triangles,
             "productsWithGeometry": len(stats.products_with_geometry),

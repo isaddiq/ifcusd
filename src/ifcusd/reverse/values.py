@@ -26,9 +26,8 @@ import math
 from collections.abc import Iterable
 from typing import Any
 
-import ifcopenshell.util.unit
-
 from ifcusd.ifc import util
+from ifcusd.ifc.units import UnitResolver
 
 LABEL_MAX_LENGTH = 255
 
@@ -121,18 +120,21 @@ def flatten(value: Any) -> list[Any]:
     return [value]
 
 
-def values_equal(a: Any, b: Any) -> bool:
-    """Equality that tolerates float round-off and list/tuple differences."""
+def values_equal(a: Any, b: Any, rel_tol: float = 1e-9) -> bool:
+    """Equality that tolerates float round-off and list/tuple differences.
+
+    ``rel_tol=1e-6`` compares at single (32-bit float) precision.
+    """
     if isinstance(a, (list, tuple)) or isinstance(b, (list, tuple)):
         if not isinstance(a, (list, tuple)) or not isinstance(b, (list, tuple)) or len(a) != len(b):
             return False
-        return all(values_equal(x, y) for x, y in zip(a, b, strict=True))
+        return all(values_equal(x, y, rel_tol) for x, y in zip(a, b, strict=True))
     if isinstance(a, bool) or isinstance(b, bool):
         return isinstance(a, bool) and isinstance(b, bool) and a == b
     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
         if math.isnan(a) and math.isnan(b):
             return True
-        return math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12)
+        return math.isclose(a, b, rel_tol=rel_tol, abs_tol=1e-12)
     return a == b
 
 
@@ -144,7 +146,7 @@ class ValueFactory:
         self.schema_name = util.schema_identifier(model)
         self.is_ifc2x3 = self.schema_name.upper() == "IFC2X3"
         self._kinds: dict[str, str | None] = {}
-        self._si_scales: dict[str, float] = {}
+        self._units: UnitResolver | None = None
 
     # ------------------------------------------------------------------ schema queries
 
@@ -228,23 +230,9 @@ class ValueFactory:
 
     def si_scale(self, measure_type: str | None) -> float:
         """SI value of one project unit of ``measure_type`` (``1.0`` when SI or unitless)."""
-        if not measure_type:
-            return 1.0
-        if measure_type not in self._si_scales:
-            scale = 1.0
-            try:
-                unit_type = ifcopenshell.util.unit.get_measure_unit_type(measure_type)
-            except Exception:
-                unit_type = None
-            if unit_type and unit_type not in ("USERDEFINED", "REALUNIT") and self._has_project_unit(unit_type):
-                try:
-                    scale = float(ifcopenshell.util.unit.calculate_unit_scale(self.model, unit_type))
-                except Exception:
-                    scale = 1.0
-                if unit_type == "MASSUNIT":
-                    scale /= 1000.0  # IfcOpenShell scales mass units relative to the gram
-            self._si_scales[measure_type] = scale or 1.0
-        return self._si_scales[measure_type]
+        if self._units is None:  # created on first use: standalone exports assign units first
+            self._units = UnitResolver(self.model)
+        return self._units.si_scale(measure_type)
 
     def from_si(self, value: Any, measure_type: str | None) -> Any:
         """Convert an SI value (or list of values) into project units."""
@@ -256,13 +244,6 @@ class ValueFactory:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
             return float(value) / scale
         return value
-
-    def _has_project_unit(self, unit_type: str) -> bool:
-        for assignment in util.by_type(self.model, "IfcUnitAssignment"):
-            for unit in util.attr(assignment, "Units", ()) or ():
-                if str(util.attr(unit, "UnitType") or "") == unit_type:
-                    return True
-        return False
 
 
 def cast_candidates(value: Any) -> list[Any]:

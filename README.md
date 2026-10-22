@@ -5,6 +5,10 @@
 <h1 align="center">IfcUSD</h1>
 
 <p align="center">
+  <img src="https://raw.githubusercontent.com/isaddiq/ifcusd/main/website/docs/assets/ifcusd-round-trip-workflow.png" alt="IfcUSD round trip: IFC is converted to OpenUSD without losing BIM information, enriched with robot and simulation data, and written back to IFC as property sets, time series, classifications and property set templates">
+</p>
+
+<p align="center">
   <strong>Convert IFC building models to OpenUSD without losing the BIM, and back.</strong><br>
   Geometry, spatial structure, every attribute, property and quantity, types, materials,<br>
   classifications, groups and relationships, written as typed, documented USD data.<br>
@@ -146,6 +150,9 @@ from ifcusd import convert_usd_to_ifc
 result = convert_usd_to_ifc("model.usdc", "model.trained.ifc", source="model.ifc", layers=["robot_run.usda"])
 ```
 
+Physics recorded this way comes back as native `UsdPhysics` schemas on the next `ifcusd convert`
+(mass, rigid bodies, colliders, physics materials), so training can continue where it stopped.
+
 IFC's schema cannot gain new entities, so the extension uses only standard mechanisms: property
 sets (`IfcUSD_Physics`, `IfcUSD_Simulation`, `Robot_Navigation`…) with IFC measure types in
 project units, `IfcTimeSeries`, classifications, and `IfcPropertySetTemplate`s in an
@@ -164,6 +171,7 @@ and the [IFC extension](https://isaddiq.github.io/ifcusd/reference/ifc-extension
                                                  documents, layers, owner history, other relationships
   Looks                               Scope      UsdPreviewSurface (+ OmniPBR) from IFC surface styles
   Prototypes                          Scope      shared meshes for instancing
+  PhysicsMaterials                    Scope      UsdPhysics materials, for models with robot physics data
 ```
 
 The full rules, including a side-by-side comparison of the IFC and OpenUSD data models, are in
@@ -171,17 +179,17 @@ the [IFC ↔ USD mapping specification](https://isaddiq.github.io/ifcusd/referen
 
 ## Compatibility
 
-| | Supported | Tested |
-| --- | --- | --- |
-| Python | 3.10 – 3.14 | 3.13 and 3.14 locally; the CI workflow runs 3.10 – 3.14 on Linux and Windows |
-| IFC | IFC2X3, IFC4, IFC4X3 (+ fallback for other identifiers), IFC5 alpha | buildingSMART samples and generated models in all three main schemas |
-| IfcOpenShell | ≥ 0.8.0 | 0.8.4, 0.9.0 |
-| OpenUSD (`usd-core`) | ≥ 24.8 | 25.8, 26.8 |
-| Targets | NVIDIA Omniverse, Unity 6 (USD Importer), usdview, Blender, any OpenUSD tool | USD validators, geometry and completeness checks |
+|                        | Supported                                                                    | Tested                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Python                 | 3.10 – 3.14                                                                 | 3.13 and 3.14 locally; the CI workflow runs 3.10 – 3.14 on Linux and Windows |
+| IFC                    | IFC2X3, IFC4, IFC4X3 (+ fallback for other identifiers), IFC5 alpha          | buildingSMART samples and generated models in all three main schemas          |
+| IfcOpenShell           | ≥ 0.8.0                                                                     | 0.8.4, 0.9.0                                                                  |
+| OpenUSD (`usd-core`) | ≥ 24.8                                                                      | 25.8, 26.8                                                                    |
+| Targets                | NVIDIA Omniverse, Unity 6 (USD Importer), usdview, Blender, any OpenUSD tool | USD validators, geometry and completeness checks                              |
 
 ## Documentation
 
-The website at **<https://isaddiq.github.io/ifcusd/>** covers:
+The website at **[https://isaddiq.github.io/ifcusd/](https://isaddiq.github.io/ifcusd/)** covers:
 
 - [Installation](https://isaddiq.github.io/ifcusd/getting-started/installation/) ·
   [Quick start](https://isaddiq.github.io/ifcusd/getting-started/quickstart/) ·

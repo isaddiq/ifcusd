@@ -45,6 +45,7 @@ class UnitResolver:
                 if unit_type and str(unit_type) not in self._project_units:
                     self._project_units[str(unit_type)] = unit
         self._measure_cache: dict[str, str | None] = {}
+        self._si_cache: dict[str, float] = {}
 
     def unit_label(self, unit: Any) -> str | None:
         if unit is None:
@@ -82,6 +83,30 @@ class UnitResolver:
             label = "RADIAN"
         self._measure_cache[measure_type] = label
         return label
+
+    def si_scale(self, measure_type: str | None) -> float:
+        """SI value of one project unit of ``measure_type``.
+
+        ``1.0`` when the measure has no unit or the project does not assign one
+        (IFC then means SI). Mass is relative to the kilogram.
+        """
+        if not measure_type:
+            return 1.0
+        if measure_type not in self._si_cache:
+            scale = 1.0
+            try:
+                unit_type = ifcopenshell.util.unit.get_measure_unit_type(measure_type)
+            except Exception:
+                unit_type = None
+            if unit_type in self._project_units and unit_type not in ("USERDEFINED", "REALUNIT"):
+                try:
+                    scale = float(ifcopenshell.util.unit.calculate_unit_scale(self.model, unit_type))
+                except Exception:
+                    scale = 1.0
+                if unit_type == "MASSUNIT":
+                    scale /= 1000.0  # IfcOpenShell scales mass units relative to the gram
+            self._si_cache[measure_type] = scale or 1.0
+        return self._si_cache[measure_type]
 
     @staticmethod
     def measure_for_quantity(quantity_class: str) -> str | None:

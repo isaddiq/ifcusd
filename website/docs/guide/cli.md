@@ -75,6 +75,7 @@ instances are counted as `filtered` in the report, not `missing`.
 | `--no-owner-history` | Leave out `IfcOwnerHistory` records |
 | `--no-type-inheritance` | Keep type property sets on the type only |
 | `--no-semantic-labels` | Do not author `UsdSemantics` class labels |
+| `--no-physics` | Do not re-apply `IfcUSD_Physics` property sets as `UsdPhysics` schemas (off for unity) |
 | `--material-model {preview,preview+mdl}` | UsdPreviewSurface only, or with an OmniPBR MDL network (omniverse default) |
 
 Data left out with these switches is reported as `skipped`.

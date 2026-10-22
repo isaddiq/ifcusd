@@ -7,7 +7,7 @@ version (`SCHEMA_VERSION`), recorded in every output file.
 ## [1.1.0] — 2026-10-23
 
 Bidirectional conversion: OpenUSD back to IFC, including robot and simulation
-data. The IFC-in-USD mapping is unchanged (version 1.0).
+data, and physics carried through the whole loop. Mapping version 1.1.
 
 ### Added
 
@@ -36,6 +36,14 @@ data. The IFC-in-USD mapping is unchanged (version 1.0).
   linked to their USD source, semantic labels as classifications, and
   `IfcPropertySetTemplate` declarations in the `IfcUSD Extension` project
   library.
+- **Physics round trip**: `ifcusd convert` writes the `IfcUSD_Physics`
+  property set as native `UsdPhysics` schemas (`PhysicsMassAPI`,
+  `PhysicsRigidBodyAPI`, `PhysicsCollisionAPI` and `PhysicsMeshCollisionAPI`
+  on the meshes, shared physics materials in `/World/PhysicsMaterials`), in
+  stage units with `kilogramsPerUnit = 1` (`physics` option, `--no-physics`;
+  off for Unity). `ifcusd to-ifc` reads both forms and compares physics at
+  32-bit precision, so unchanged values never drift and an edit in either
+  form is written.
 - `IfcExportOptions`, `IfcExportReport` (counts, new elements, products not in
   USD, warnings) and schema validation that separates errors the export
   introduced from those the source already had (`--validate`).

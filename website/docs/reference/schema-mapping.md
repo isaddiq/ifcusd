@@ -5,7 +5,7 @@ do not line up, and specifies exactly how IfcUSD maps one onto the other. It
 is the reference for anyone who reads IfcUSD output programmatically, extends
 the mapping, or needs to cite it.
 
-Mapping version: **1.0** (`ifcusd.SCHEMA_VERSION`, also written to every file as
+Mapping version: **1.1** (`ifcusd.SCHEMA_VERSION`, also written to every file as
 `customLayerData.ifcusd.schemaVersion`).
 
 ---
@@ -100,6 +100,7 @@ coordinate is rewritten.
     Relationships/<IfcRel class>/<relationship>
   Looks                                  Scope                   UsdShade render materials
   Prototypes                             Scope                   class prims shared by instanceable meshes
+  PhysicsMaterials                       Scope                   UsdPhysics materials (3.10), when present
 ```
 
 **Choosing the parent.** For each object, the first applicable relationship
@@ -321,6 +322,27 @@ and composed with buildingSMART's reference algorithm (`children` instantiate,
 | `bsi::ifc::presentation::diffuseColor/opacity` | bound `UsdPreviewSurface` material + `displayColor` |
 | `{"ref": "<node>"}` | `rel` to the referenced node's prim(s) |
 | any other `ns::a::b` | attribute `ns:a:b` (`-` → `_`), typed. Enum schemas become `token` + `allowedTokens`; objects become nested namespaces. `customData.ifcxKey` keeps the exact key. |
+
+### 3.10 Physics
+
+Physics has no IFC counterpart, but `ifcusd to-ifc` stores the `UsdPhysics`
+data of a simulation as the `IfcUSD_Physics` property set (see the
+[IFC extension](ifc-extension.md)). When an element carries that set, it is
+written both as `ifc:pset:IfcUSD_Physics:*` attributes and as native schemas:
+
+| `IfcUSD_Physics` property | `UsdPhysics` in the USD output |
+| --- | --- |
+| `Mass`, `Density`, `CenterOfMass` | `PhysicsMassAPI` on the element prim (`physics:mass`, `physics:density`, `physics:centerOfMass`) |
+| `RigidBodyEnabled`, `KinematicEnabled` | `PhysicsRigidBodyAPI` on the element prim |
+| `CollisionEnabled` | `PhysicsCollisionAPI` on each of the element's meshes |
+| `CollisionApproximation` | `PhysicsMeshCollisionAPI` (`physics:approximation`) on each mesh |
+| `StaticFriction`, `DynamicFriction`, `Restitution` | A `Material` with `PhysicsMaterialAPI` in `/World/PhysicsMaterials`, bound to the meshes for the `physics` purpose (identical materials are shared) |
+| `Articulated`, `JointCount` | Not applied: a robot's links were merged into one element, so there is no articulation to rebuild |
+
+Masses are in kilograms (`kilogramsPerUnit = 1` is authored), lengths and
+densities in stage units. The centre of mass is not written with
+`--world-coords`, where prims no longer carry the element's frame. The Unity
+profile and `--no-physics` leave the schemas out.
 
 ---
 

@@ -40,6 +40,10 @@ ifcusd convert model.ifc model.usdc --profile omniverse --validate
   (or its IFC class). Replicator and Isaac Sim pick these up for semantic and
   instance segmentation by IFC class, and the profile also writes the legacy
   `SemanticsAPI:Semantics` attributes used by older releases.
+* **Physics.** Models that went through `ifcusd to-ifc` carry the
+  `IfcUSD_Physics` property set; it is written as `UsdPhysics` mass, rigid
+  body, collider and physics-material schemas, so Isaac Sim simulates them
+  as they were. See [USD to IFC and robot data](usd-to-ifc.md#physics-comes-back-as-physics).
 * **Schema-aware tools (optional).** To make Kit's USD runtime know the IfcUSD
   API schemas, add the schema folder to the plugin path before Kit starts:
 

@@ -35,7 +35,7 @@ def test_stage_metadata_and_provenance(converted, schema) -> None:
     assert UsdGeom.GetStageMetersPerUnit(stage) == 1.0
     data = stage.GetRootLayer().customLayerData["ifcusd"]
     assert data["ifcSchema"] == schema
-    assert data["schemaVersion"] == "1.0"
+    assert data["schemaVersion"] == "1.1"
     assert "threads" not in data["options"]
     root = stage.GetPrimAtPath("/World")
     assert root.GetAttribute("ifc:file:schema").Get() == schema

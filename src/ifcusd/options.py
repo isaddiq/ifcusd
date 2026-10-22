@@ -33,6 +33,7 @@ _PROFILE_DEFAULTS: dict[str, dict[str, Any]] = {
         "spaces": "skip",
         "material_model": "preview",
         "semantic_labels": False,
+        "physics": False,
     },
 }
 
@@ -104,6 +105,9 @@ class ConversionOptions:
             (occurrence values win per property).
         semantic_labels: Author ``SemanticsLabelsAPI`` class labels.
         legacy_semantics: Also author the legacy Omniverse ``SemanticsAPI``.
+        physics: Re-apply the ``IfcUSD_Physics`` property set (written by
+            ``ifcusd to-ifc``) as ``UsdPhysics`` schemas: mass, rigid body,
+            colliders and physics materials. Needs property sets.
         material_model: ``"preview"`` (UsdPreviewSurface) or ``"preview+mdl"``
             (adds an OmniPBR MDL network).
         ignore_geometry_errors: Continue when an element cannot be tessellated
@@ -149,6 +153,7 @@ class ConversionOptions:
     inherit_type_properties: bool = True
     semantic_labels: bool = True
     legacy_semantics: bool = False
+    physics: bool = True
 
     # Look development
     material_model: str = "preview"

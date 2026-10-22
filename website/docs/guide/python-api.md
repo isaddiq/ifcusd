@@ -113,6 +113,7 @@ print(options.to_dict())          # serializable view (also stored in each file)
 | `inherit_type_properties` | `True` | Copy type property sets onto occurrences |
 | `semantic_labels` | `True` | `SemanticsLabelsAPI` class labels |
 | `legacy_semantics` | `False` | Legacy Omniverse `SemanticsAPI` labels |
+| `physics` | `True` | Re-apply `IfcUSD_Physics` as `UsdPhysics` schemas |
 | `material_model` | `"preview"` | `"preview"` or `"preview+mdl"` |
 | `ignore_geometry_errors` | `True` | Continue past elements whose geometry fails |
 | `schema_fallback` | `True` | Read unknown schema identifiers with the closest supported schema |
@@ -129,6 +130,7 @@ Profile presets:
 | `material_model` | preview | preview+mdl | preview |
 | `semantic_labels` | on | on | off |
 | `legacy_semantics` | off | on | off |
+| `physics` | on | on | off |
 
 Invalid values raise `ValueError` when the options are created.
 

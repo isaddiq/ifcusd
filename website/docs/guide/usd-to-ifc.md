@@ -129,7 +129,7 @@ layer.Save()
 | Changed or new `ifc:pset:<Set>:<Property>` | The property. Sets shared by several objects are copied first, so only this object changes. A changed value inherited from the type becomes an occurrence override; the type keeps its value. |
 | Changed or new `ifc:qto:<Set>:<Quantity>` | The quantity (`IfcQuantityLength`, `IfcQuantityArea`, …) |
 | `robot:<group>:<name>`, `sim:<group>:<name>` | Property `<name>` of the set `Robot_<Group>` / `Sim_<Group>`, converted to project units |
-| `UsdPhysics` mass, density, centre of mass, rigid body, collision, physics material, articulation | Property set `IfcUSD_Physics` |
+| `UsdPhysics` mass, density, centre of mass, rigid body, collision, physics material, articulation | Property set `IfcUSD_Physics` (and back to `UsdPhysics` by `ifcusd convert`, [see below](#physics-comes-back-as-physics)) |
 | Time samples on any exported attribute | `IfcRegularTimeSeries` or `IfcIrregularTimeSeries`, referenced by an `IfcPropertyReferenceValue` |
 | Animated transform | `IfcUSD_Simulation`: `Trajectory` (time series of position and orientation), `Duration`, `PathLength` |
 | `semantics:labels:<taxonomy>`, legacy Replicator `SemanticsAPI` | `IfcClassificationReference` in an `IfcClassification` named after the taxonomy |
@@ -232,10 +232,38 @@ same file, apart from timestamps.
 ## Round trips
 
 The enriched IFC file converts back to USD like any other. The robot data then
-appears as `ifc:pset:Robot_Navigation:clearance`, `ifc:pset:IfcUSD_Physics:Mass`
-and so on, and exporting that USD file again, unchanged, writes nothing. You
-can therefore run IFC → USD → IFC as often as your training loop needs, with
-each iteration adding to the same model.
+appears as `ifc:pset:Robot_Navigation:clearance` and so on, and exporting that
+USD file again, unchanged, writes nothing. You can therefore run IFC → USD →
+IFC as often as your training loop needs, with each iteration adding to the
+same model.
+
+### Physics comes back as physics
+
+`ifcusd convert` turns the `IfcUSD_Physics` property set back into native
+`UsdPhysics` schemas, so the next simulation starts with the masses, rigid
+bodies, colliders and friction of the last one:
+
+| `IfcUSD_Physics` property | `UsdPhysics` in the USD output |
+| --- | --- |
+| `Mass`, `Density`, `CenterOfMass` | `PhysicsMassAPI` on the element prim (`physics:mass`, `physics:density`, `physics:centerOfMass`) |
+| `RigidBodyEnabled`, `KinematicEnabled` | `PhysicsRigidBodyAPI` on the element prim |
+| `CollisionEnabled` | `PhysicsCollisionAPI` on each of the element's meshes |
+| `CollisionApproximation` | `PhysicsMeshCollisionAPI` (`physics:approximation`) on each mesh |
+| `StaticFriction`, `DynamicFriction`, `Restitution` | A `Material` with `PhysicsMaterialAPI` in `/World/PhysicsMaterials`, bound to the meshes for the `physics` purpose (identical materials are shared) |
+| `Articulated`, `JointCount` | Not applied: a robot's links were merged into one element, so there is no articulation to rebuild |
+
+Values are converted from project units to SI and then to the stage's units
+(`kilogramsPerUnit` is set to 1, densities follow `metersPerUnit`). The
+property set is also kept as `ifc:pset:IfcUSD_Physics:*` attributes.
+
+On the way back to IFC both forms are read. If you change `physics:mass` in
+Isaac Sim, the new mass is written. If you change the
+`ifc:pset:IfcUSD_Physics:Mass` attribute instead, that edit is written. When
+both changed, the simulation's value is used. `UsdPhysics` stores 32-bit
+floats, so values are compared at that precision: a mass of
+`1840.123456789` kg survives any number of round trips unchanged.
+
+The Unity profile and `--no-physics` leave physics out.
 
 ## Limitations
 
@@ -250,6 +278,5 @@ each iteration adding to the same model.
   mode; parametric geometry becomes tessellated geometry there.
 * **IFC2X3** has no property set templates and no `IfcSensor`; the data is
   still written as property sets on `IfcBuildingElementProxy` elements.
-* `UsdPhysics` APIs are read, but `ifcusd convert` does not re-apply
-  `IfcUSD_Physics` as `UsdPhysics` APIs: in the next round they appear as
-  `ifc:pset:IfcUSD_Physics:*` attributes.
+* **Articulations** are not rebuilt in USD from `IfcUSD_Physics`
+  (`Articulated`, `JointCount`), because a robot is one IFC element.

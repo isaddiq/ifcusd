@@ -61,6 +61,10 @@ QUANTITY_VALUE_ATTRIBUTE = {
     "IfcQuantityTime": "TimeValue",
     "IfcQuantityNumber": "NumberValue",
 }
+# Metadata key marking values USD stores as 32-bit floats (UsdPhysics): they compare at that precision,
+# so a value that only went through float storage on a round trip does not count as changed.
+SINGLE_PRECISION = "ifcPrecision"
+
 # IfcObjectReferenceSelect: entity classes an IfcPropertyReferenceValue may point to.
 REFERENCE_TARGETS = (
     "IfcMaterialDefinition",
@@ -108,6 +112,15 @@ class SetValue:
     @property
     def has_content(self) -> bool:
         return self.value is not None or bool(self.targets) or bool(self.samples)
+
+    @property
+    def tolerance(self) -> float:
+        """Relative tolerance when comparing this value with IFC data."""
+        return 1e-6 if self.metadata.get(SINGLE_PRECISION) == "single" else 1e-9
+
+    def same_as(self, other: Any) -> bool:
+        """Whether this value equals ``other`` (a plain value) at this value's precision."""
+        return values_equal(_comparable(self.value), _comparable(other), self.tolerance)
 
 
 @dataclass
@@ -261,7 +274,7 @@ def changed_values(usd: SetData, existing: PropertySet | None, entity_for_path: 
             new_ids = sorted(e.id() for e in (entity_for_path(t) for t in value.targets) if e is not None)
             if new_ids != sorted(t.id() for t in old.targets):
                 changed.append(value)
-        elif not values_equal(_comparable(value.value), _comparable(old.value.value if old.value else None)):
+        elif not value.same_as(old.value.value if old.value else None):
             changed.append(value)
     return changed
 

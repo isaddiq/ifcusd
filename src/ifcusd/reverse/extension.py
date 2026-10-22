@@ -37,46 +37,22 @@ import ifcopenshell.guid
 import numpy as np
 
 from ifcusd.dependencies import import_usd
+from ifcusd.extension import (
+    LIBRARY_NAME,
+    PHYSICS_SET,
+    PROPERTY_DESCRIPTIONS,
+    SEMANTICS_SOURCE,
+    SET_DESCRIPTIONS,
+    SIMULATION_SET,
+)
 from ifcusd.ifc import util
 from ifcusd.reverse.attributes import create
-from ifcusd.reverse.properties import SetData, SetValue
+from ifcusd.reverse.properties import SINGLE_PRECISION, SetData, SetValue
 from ifcusd.reverse.stage import PrimRecord, UsdScene, attribute_value, layer_name, quaternion, rigid
 from ifcusd.reverse.values import ValueFactory, flatten
 
 _usd = import_usd()
 Usd, UsdGeom, UsdPhysics, UsdShade = _usd.Usd, _usd.UsdGeom, _usd.UsdPhysics, _usd.UsdShade
-
-PHYSICS_SET = "IfcUSD_Physics"
-SIMULATION_SET = "IfcUSD_Simulation"
-LIBRARY_NAME = "IfcUSD Extension"
-SEMANTICS_SOURCE = "OpenUSD UsdSemantics"
-
-SET_DESCRIPTIONS = {
-    PHYSICS_SET: "Physical simulation properties from OpenUSD UsdPhysics, written by IfcUSD.",
-    SIMULATION_SET: "Motion recorded in an OpenUSD simulation (time-sampled transforms), written by IfcUSD.",
-}
-PROPERTY_DESCRIPTIONS = {
-    PHYSICS_SET: {
-        "Mass": "Mass (UsdPhysics.MassAPI); the sum over the object's bodies when not authored on the object.",
-        "Density": "Mass density (UsdPhysics.MassAPI, or the bound physics material).",
-        "CenterOfMass": "Centre of mass X, Y, Z in the object's placement frame.",
-        "RigidBodyEnabled": "The object is a dynamic rigid body (UsdPhysics.RigidBodyAPI).",
-        "KinematicEnabled": "The rigid body is moved kinematically, not by the solver.",
-        "CollisionEnabled": "The object, or a part of it, collides (UsdPhysics.CollisionAPI).",
-        "CollisionApproximation": "Collision shape approximation (UsdPhysics.MeshCollisionAPI), e.g. convexHull.",
-        "StaticFriction": "Static friction coefficient of the bound physics material.",
-        "DynamicFriction": "Dynamic friction coefficient of the bound physics material.",
-        "Restitution": "Coefficient of restitution of the bound physics material.",
-        "Articulated": "The object is an articulation (UsdPhysics.ArticulationRootAPI), typically a robot.",
-        "JointCount": "Number of physics joints in the object.",
-    },
-    SIMULATION_SET: {
-        "Trajectory": "Position X, Y, Z (project length unit) and orientation quaternion W, X, Y, Z in the project "
-        "coordinate system at every USD time sample.",
-        "Duration": "Time between the first and the last trajectory sample.",
-        "PathLength": "Distance travelled along the trajectory.",
-    },
-}
 
 
 # ---------------------------------------------------------------------- harvesting
@@ -119,11 +95,9 @@ def physics_set(scene: UsdScene, record: PrimRecord, factory: ValueFactory) -> S
             bool(attribute_value(body.GetRigidBodyEnabledAttr(), scene.time)),
             "IfcBoolean",
         )
-        values["KinematicEnabled"] = (
-            "bool",
-            bool(attribute_value(body.GetKinematicEnabledAttr(), scene.time)),
-            "IfcBoolean",
-        )
+        kinematic = body.GetKinematicEnabledAttr()
+        if kinematic.HasAuthoredValue():
+            values["KinematicEnabled"] = ("bool", bool(attribute_value(kinematic, scene.time)), "IfcBoolean")
     colliders = [p for p in prims if p.HasAPI(UsdPhysics.CollisionAPI)]
     if colliders:
         enabled = any(
@@ -137,7 +111,10 @@ def physics_set(scene: UsdScene, record: PrimRecord, factory: ValueFactory) -> S
         ]
         if approximations:
             values["CollisionApproximation"] = ("token", approximations[0], "IfcLabel")
-    for prim in [root, *colliders]:
+    # A physics material describes collision surfaces: read it from the colliders (most
+    # specific binding first), and not for prims that do not collide, which would
+    # otherwise inherit an ancestor's binding (an opening inside its wall).
+    for prim in [*colliders, root] if colliders else []:
         material, _rel = UsdShade.MaterialBindingAPI(prim).ComputeBoundMaterial("physics")
         if material and material.GetPrim().HasAPI(UsdPhysics.MaterialAPI):
             api = UsdPhysics.MaterialAPI(material.GetPrim())
@@ -169,10 +146,15 @@ def physics_set(scene: UsdScene, record: PrimRecord, factory: ValueFactory) -> S
         return None
     data = SetData(name=PHYSICS_SET, origin="physics")
     for name, (usd_type, value, value_type) in values.items():
-        data.values.append(
-            SetValue(path=(name,), name=name, usd_type=usd_type, value=value, metadata={"ifcValueType": value_type})
-        )
+        metadata = {"ifcValueType": value_type}
+        if name in _SINGLE_PRECISION:
+            metadata[SINGLE_PRECISION] = "single"  # compared at float precision, see changed_values
+        data.values.append(SetValue(path=(name,), name=name, usd_type=usd_type, value=value, metadata=metadata))
     return data
+
+
+# UsdPhysics stores these as 32-bit floats.
+_SINGLE_PRECISION = {"Mass", "Density", "CenterOfMass", "StaticFriction", "DynamicFriction", "Restitution"}
 
 
 def simulation_set(scene: UsdScene, record: PrimRecord, factory: ValueFactory) -> SetData | None:

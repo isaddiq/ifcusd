@@ -39,6 +39,14 @@ from ifcusd.naming import UniqueNames, lower_first, safe_identifier
 from ifcusd.options import ConversionOptions
 from ifcusd.usd.geometry import write_curves, write_mesh
 from ifcusd.usd.materials import write_material
+from ifcusd.usd.physics import (
+    PHYSICS_MATERIALS_SCOPE,
+    PhysicsSpec,
+    physics_material_name,
+    physics_spec,
+    write_physics,
+    write_physics_material,
+)
 from ifcusd.usd.sdf import Gf, LayerWriter, Sdf, matrix_from_rows, set_display_name, usd_dictionary
 
 log = logging.getLogger(__name__)
@@ -74,6 +82,8 @@ class WriteStats:
     instances: int = 0
     prototypes: int = 0
     materials: int = 0
+    physics_prims: int = 0
+    physics_materials: int = 0
     points: int = 0
     triangles: int = 0
     shapes_without_prim: int = 0
@@ -128,6 +138,7 @@ class SceneWriter:
         self._curve_paths: dict[str, int] = {}
         self._products_with_mesh: set[int] = set()
         self._used_materials: dict[str, MaterialSpec] = {}
+        self._physics: dict[str, PhysicsSpec] = {}
         self.sidecar = sidecar
 
     # ================================================================== phase 1
@@ -261,6 +272,15 @@ class SceneWriter:
             if self.extractor.include_properties or self.extractor.include_quantities:
                 sets = self.extractor.for_object(entity, inherit_from_type=self.options.inherit_type_properties)
                 self._write_property_sets(spec, sets)
+                if self.options.physics and node.kind in _SEMANTIC_KINDS:
+                    physics = physics_spec(
+                        sets,
+                        self.units,
+                        meters_per_unit=self.options.output_meters_per_unit,
+                        center_of_mass=not self.options.use_world_coords,
+                    )
+                    if physics is not None:
+                        self._physics[node.path] = physics
                 if self.sidecar is not None:
                     self._sidecar_entry(node, sets)
             elif self.sidecar is not None:
@@ -705,7 +725,41 @@ class SceneWriter:
             for path in sorted(self._prototypes):
                 Sdf.CopySpec(self._scratch, Sdf.Path(path), self.layer, Sdf.Path(path))
                 self.stats.prims += 1
+        self._write_physics()
         self._scratch = None  # release geometry memory
+
+    def _write_physics(self) -> None:
+        """Re-apply ``IfcUSD_Physics`` as UsdPhysics schemas, now that the meshes exist."""
+        if not self._physics:
+            return
+        try:
+            self.layer.pseudoRoot.SetInfo("kilogramsPerUnit", 1.0)
+        except Exception:  # UsdPhysics metadata not registered: kilograms are the default anyway
+            pass
+        meshes: dict[str, list[str]] = {}
+        for path in sorted(self._geometry_paths, key=_path_sort_key):
+            if path not in self._curve_paths and self.layer.GetPrimAtPath(path) is not None:
+                meshes.setdefault(path.rsplit("/", 1)[0], []).append(path)
+        materials: dict[tuple[float | None, float | None, float | None], str] = {}
+        keys = {spec.material for spec in self._physics.values() if spec.material is not None}
+        if keys:
+            scope = f"{self.root_path}/{PHYSICS_MATERIALS_SCOPE}"
+            self.writer.prim(scope, "Scope")
+            self.stats.prims += 1
+            names = UniqueNames()
+            for key in sorted(keys, key=repr):
+                materials[key] = f"{scope}/{names.claim(physics_material_name(key))}"
+                write_physics_material(self.writer, materials[key], key)
+                self.stats.physics_materials += 1
+                self.stats.prims += 1
+        for path in sorted(self._physics, key=_path_sort_key):
+            spec = self._physics[path]
+            colliders = [self.layer.GetPrimAtPath(p) for p in meshes.get(path, [])]
+            material = materials.get(spec.material) if spec.material is not None else None
+            write_physics(
+                self.writer, self.layer.GetPrimAtPath(path), spec, colliders=colliders, material_path=material
+            )
+            self.stats.physics_prims += 1
 
 
 # ---------------------------------------------------------------------- helpers

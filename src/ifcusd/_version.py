@@ -8,4 +8,4 @@ decide whether they understand a file.
 
 __version__ = "1.1.0"
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
