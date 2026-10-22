@@ -17,7 +17,8 @@ IfcUSD is a Python package and command-line tool. It converts building
 models in every IFC version to OpenUSD, including geometry, spatial
 structure, every attribute, property and quantity, types, materials,
 classifications, groups and relationships, and proves that nothing was
-lost.
+lost. It also converts back: robot and simulation results recorded in USD
+return to the IFC model as standard, self-describing IFC data.
 </p>
 
 [Get started :material-arrow-right:](getting-started/installation.md){ .md-button .md-button--primary }
@@ -26,7 +27,7 @@ lost.
 
 <div class="ifc-pills">
 <span>IFC2X3</span><span>IFC4</span><span>IFC4X3</span><span>IFC5 · IFCX</span>
-<span>NVIDIA Omniverse</span><span>Unity 6</span><span>Python 3.10 – 3.14</span><span>MIT</span>
+<span>USD → IFC</span><span>NVIDIA Omniverse</span><span>Unity 6</span><span>Python 3.10 – 3.14</span><span>MIT</span>
 </div>
 
 </div>
@@ -113,6 +114,26 @@ model.usdc: <span class="t-ok">OK</span> (0 errors, 0 warnings)
     trails.
 
     [:octicons-arrow-right-24: Reproducibility](reference/schema-mapping.md#5-reproducibility)
+
+-   :material-swap-horizontal:{ .lg .middle } __Both directions__
+
+    ---
+
+    `ifcusd to-ifc` writes USD back to IFC: edited values, moved objects,
+    new robots and sensors, physics, trajectories and sensor time series,
+    as property sets and templates any IFC tool can read.
+
+    [:octicons-arrow-right-24: USD to IFC and robot data](guide/usd-to-ifc.md)
+
+-   :material-robot-industrial:{ .lg .middle } __Robot data in BIM__
+
+    ---
+
+    Train robots in Isaac Sim on the real building, then hand the results to
+    code checking and design: an IFC extension built only from standard
+    mechanisms, declared inside each file.
+
+    [:octicons-arrow-right-24: IFC extension](reference/ifc-extension.md)
 
 </div>
 

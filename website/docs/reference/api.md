@@ -6,13 +6,16 @@ The public API is importable from the top-level package:
 from ifcusd import (
     convert, convert_file, IfcToUsdConverter, ConversionResult,
     ConversionOptions, ConversionReport, validate_usd,
+    convert_usd_to_ifc, UsdToIfcConverter, IfcExportResult,
+    IfcExportOptions, IfcExportReport,
     IfcUsdError, InputError, UnsupportedSchemaError, OutputError, GeometryError,
     MissingUsdDependencyError, PROFILES, SCHEMA_VERSION, __version__,
 )
 ```
 
-Modules under `ifcusd.ifc`, `ifcusd.ifcx` and `ifcusd.usd` are internal and
-may change between minor releases.
+Modules under `ifcusd.ifc`, `ifcusd.ifcx`, `ifcusd.usd` and `ifcusd.reverse`
+(other than the converter and report documented here) are internal and may
+change between minor releases.
 
 ## Converting
 
@@ -21,6 +24,14 @@ may change between minor releases.
 ::: ifcusd.converter.IfcToUsdConverter
 
 ::: ifcusd.converter.ConversionResult
+
+## Converting USD to IFC
+
+::: ifcusd.reverse.converter.convert_usd_to_ifc
+
+::: ifcusd.reverse.converter.UsdToIfcConverter
+
+::: ifcusd.reverse.converter.IfcExportResult
 
 ## Options
 
@@ -33,6 +44,12 @@ may change between minor releases.
         - output_meters_per_unit
         - output_scale
 
+::: ifcusd.options.IfcExportOptions
+    options:
+      members:
+        - with_changes
+        - to_dict
+
 ## Reports
 
 ::: ifcusd.report.ConversionReport
@@ -41,6 +58,15 @@ may change between minor releases.
         - complete
         - missing_count
         - coverage_totals
+        - summary_lines
+        - to_dict
+        - to_json
+
+::: ifcusd.reverse.report.IfcExportReport
+    options:
+      members:
+        - valid
+        - introduced_errors
         - summary_lines
         - to_dict
         - to_json

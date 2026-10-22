@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "IfcUSD"
 dynamic = ["version"]
-description = "Complete, reproducible conversion of IFC (IFC2X3, IFC4, IFC4X3, IFC5) building models to OpenUSD for NVIDIA Omniverse, Unity and any OpenUSD pipeline."
+description = "Complete, reproducible conversion of IFC (IFC2X3, IFC4, IFC4X3, IFC5) building models to OpenUSD and back, with robot and simulation data, for NVIDIA Omniverse, Unity and any OpenUSD pipeline."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
   { name = "OpenBIM2OpenUSD contributors" }
 ]
-keywords = ["ifc", "openbim", "bim", "openusd", "usd", "ifcopenshell", "omniverse", "unity", "digital twin", "ifc5"]
+keywords = ["ifc", "openbim", "bim", "openusd", "usd", "ifcopenshell", "omniverse", "unity", "digital twin", "ifc5", "robotics", "isaac sim"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",

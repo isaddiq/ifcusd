@@ -18,12 +18,14 @@ class UsdBindings:
     UsdGeom: object
     UsdShade: object
     Vt: object
+    UsdLux: object = None
+    UsdPhysics: object = None
 
 
 @lru_cache(maxsize=1)
 def import_usd() -> UsdBindings:
     try:
-        from pxr import Gf, Sdf, Usd, UsdGeom, UsdShade, Vt
+        from pxr import Gf, Sdf, Usd, UsdGeom, UsdLux, UsdPhysics, UsdShade, Vt
     except ImportError as exc:
         raise MissingUsdDependencyError(
             "Pixar USD Python bindings are required to write USD files. "
@@ -31,7 +33,9 @@ def import_usd() -> UsdBindings:
             "application that ships them (for example NVIDIA Omniverse Kit)."
         ) from exc
 
-    return UsdBindings(Gf=Gf, Sdf=Sdf, Usd=Usd, UsdGeom=UsdGeom, UsdShade=UsdShade, Vt=Vt)
+    return UsdBindings(
+        Gf=Gf, Sdf=Sdf, Usd=Usd, UsdGeom=UsdGeom, UsdShade=UsdShade, Vt=Vt, UsdLux=UsdLux, UsdPhysics=UsdPhysics
+    )
 
 
 def usd_version() -> str:

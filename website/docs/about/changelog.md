@@ -4,6 +4,49 @@ All notable changes to IfcUSD are documented here. The project follows
 [Semantic Versioning](https://semver.org/). The IFC-in-USD mapping has its own
 version (`SCHEMA_VERSION`), recorded in every output file.
 
+## [1.1.0] — 2026-10-23
+
+Bidirectional conversion: OpenUSD back to IFC, including robot and simulation
+data. The IFC-in-USD mapping is unchanged (version 1.0).
+
+### Added
+
+- **`ifcusd to-ifc`** and `convert_usd_to_ifc()` / `UsdToIfcConverter`
+  convert a USD stage to IFC, with extra USD layers composed on top
+  (`--layer`).
+- **Merge mode** (`--source model.ifc`): the source IFC is updated with what
+  changed or was added in USD: attributes and classes, property and quantity
+  values (shared sets are copied on write, changed type values become
+  occurrence overrides), placements of moved products, copies of IFC prims
+  (new `GlobalId`s), and new elements. Exporting an unchanged stage writes
+  nothing; products without a prim are reported, never deleted.
+- **Standalone mode**: the IFC model is rebuilt from an IfcUSD stage
+  (spatial structure, every attribute, all property kinds, quantities,
+  types, materials, classifications, groups, layers, generic relationships,
+  units, georeferencing, tessellated geometry with `IfcMappedItem`
+  instancing), or created from any USD scene, such as one built in Isaac Sim.
+- **New elements from USD prims**: articulated robots, sensors (`IfcSensor`),
+  meshes and implicit shapes become elements with geometry, surface styles,
+  spatial containment and host connections, with stable `GlobalId`s.
+- **IFC extension for robot and simulation data**, built only from standard
+  IFC mechanisms: `IfcUSD_Physics` (from `UsdPhysics`),
+  `IfcUSD_Simulation` (trajectories), `Robot_*` / `Sim_*` property sets from
+  the `robot:` and `sim:` namespaces (SI values converted to project units),
+  time-sampled values as `IfcRegularTimeSeries` / `IfcIrregularTimeSeries`
+  linked to their USD source, semantic labels as classifications, and
+  `IfcPropertySetTemplate` declarations in the `IfcUSD Extension` project
+  library.
+- `IfcExportOptions`, `IfcExportReport` (counts, new elements, products not in
+  USD, warnings) and schema validation that separates errors the export
+  introduced from those the source already had (`--validate`).
+- Documentation: [USD to IFC and robot data](../guide/usd-to-ifc.md) and the
+  [IFC extension](../reference/ifc-extension.md) specification.
+
+### Fixed
+
+- The test model factory no longer leaks IfcOpenShell owner settings from the
+  IFC2X3 model into the IFC4 and IFC4X3 models.
+
 ## [1.0.0] — 2026-10-20
 
 A rewrite focused on complete, typed and reproducible IFC → OpenUSD conversion.

@@ -6,6 +6,6 @@ only when the structure of the written USD changes, so consumers can test it to
 decide whether they understand a file.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 SCHEMA_VERSION = "1.0"

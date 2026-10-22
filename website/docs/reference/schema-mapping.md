@@ -415,7 +415,21 @@ from the raw file and reported in `dropped_entities`.
 
 ---
 
-## 7. Known limitations
+## 7. The reverse direction
+
+`ifcusd to-ifc` applies these rules backwards. `ifc:class` and `ifc:globalId`
+(or `ifc:stepId` for resources) identify the entity; `ifc:<attribute>` names
+map back to EXPRESS names (`ifc:globalId` → `GlobalId`); `customData`
+(`ifcType`, `ifcValueType`, `ifcUnit`, `ifcComplexProperty`, `ifcSource`)
+restores the exact property kind, defined type and inheritance;
+`ifc:parentRelationship` restores the decomposition relationship; USD
+relationships restore entity references and associations; transforms become
+placements and meshes become `IfcTriangulatedFaceSet` (shared prototypes
+become `IfcMappedItem`s). Data added in USD that has no IFC counterpart is
+written with the [IFC extension for robot and simulation data](ifc-extension.md).
+The user-facing description is in [USD to IFC and robot data](../guide/usd-to-ifc.md).
+
+## 8. Known limitations
 
 * **Tessellation, not parametric round-trip.** USD output is explicit geometry.
   The parametric definition stays in the IFC file, which the output links to by

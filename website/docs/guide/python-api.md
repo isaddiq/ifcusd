@@ -11,6 +11,8 @@ from ifcusd import (
     ConversionResult,      # what convert() returns
     ConversionReport,      # counts, coverage, warnings, provenance
     validate_usd,          # validation and completeness check
+    convert_usd_to_ifc,    # USD back to IFC (merge into a source, or rebuild)
+    IfcExportOptions,      # settings of the USD to IFC direction
     IfcUsdError,           # base class of all IfcUSD errors
 )
 ```
@@ -43,6 +45,35 @@ from ifcusd import ConversionOptions, IfcToUsdConverter
 converter = IfcToUsdConverter(ConversionOptions.for_profile("omniverse"))
 for ifc in sorted(Path("models").glob("*.ifc")):
     converter.convert(ifc, Path("usd") / f"{ifc.stem}.usdc")
+```
+
+## Converting USD back to IFC
+
+`convert_usd_to_ifc` writes a USD stage back to IFC. With `source=` the
+original IFC file is updated with what changed or was added in USD; without it
+the model is rebuilt from USD. See [USD to IFC and robot data](usd-to-ifc.md).
+
+```python
+from ifcusd import IfcExportOptions, UsdToIfcConverter, convert_usd_to_ifc
+
+result = convert_usd_to_ifc(
+    "model.usdc",
+    "model.trained.ifc",
+    source="model.ifc",
+    layers=["robot_run_01.usda"],      # composed on top of model.usdc
+    report_path="export.json",
+    validate=True,
+)
+report = result.report
+print(report.counts["newObjects"], report.counts["propertySetsCreated"])
+for item in report.created_objects:
+    print(item["ifcClass"], item["globalId"], item["usdPath"])
+model = result.model                    # the ifcopenshell.file that was written
+
+# Several runs against the same source, latest state of each:
+converter = UsdToIfcConverter(IfcExportOptions(time="latest", extension_namespaces=("robot", "sim", "nav")))
+for run in ("run_01", "run_02"):
+    converter.convert("model.usdc", f"model.{run}.ifc", source="model.ifc", layers=[f"{run}.usda"])
 ```
 
 ## Options

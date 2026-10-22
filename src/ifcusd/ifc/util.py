@@ -183,6 +183,14 @@ def explicit_attributes(entity: Any) -> Iterator[tuple[str, str, Any]]:
         yield name, kind, value
 
 
+def declaration(schema_name: str, name: str) -> Any | None:
+    """Schema declaration (entity, type, enumeration or select) by name, or ``None``."""
+    try:
+        return _schema(schema_name).declaration_by_name(name)
+    except Exception:
+        return None
+
+
 def is_subtype_name(schema_name: str, entity_class: str, ancestor: str) -> bool:
     """Schema-level subtype test on class names (no instance needed)."""
     try:

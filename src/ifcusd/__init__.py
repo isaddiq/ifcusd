@@ -1,11 +1,14 @@
-"""IfcUSD: convert IFC building models to OpenUSD.
+"""IfcUSD: convert IFC building models to OpenUSD, and OpenUSD back to IFC.
 
 Quick start::
 
-    from ifcusd import ConversionOptions, convert
+    from ifcusd import ConversionOptions, convert, convert_usd_to_ifc
 
     result = convert("model.ifc", "model.usdc", ConversionOptions.for_profile("omniverse"))
     print("\\n".join(result.report.summary_lines()))
+
+    # ... add robot or simulation data in USD, then write it back into the IFC model:
+    convert_usd_to_ifc("model.usdc", "model.updated.ifc", source="model.ifc")
 """
 
 from ifcusd._version import SCHEMA_VERSION, __version__
@@ -17,7 +20,7 @@ from ifcusd.errors import (
     OutputError,
     UnsupportedSchemaError,
 )
-from ifcusd.options import PROFILES, ConversionOptions
+from ifcusd.options import PROFILES, ConversionOptions, IfcExportOptions
 
 __all__ = [
     "PROFILES",
@@ -26,15 +29,20 @@ __all__ = [
     "ConversionReport",
     "ConversionResult",
     "GeometryError",
+    "IfcExportOptions",
+    "IfcExportReport",
+    "IfcExportResult",
     "IfcToUsdConverter",
     "IfcUsdError",
     "InputError",
     "MissingUsdDependencyError",
     "OutputError",
     "UnsupportedSchemaError",
+    "UsdToIfcConverter",
     "__version__",
     "convert",
     "convert_file",
+    "convert_usd_to_ifc",
     "validate_usd",
 ]
 
@@ -45,6 +53,10 @@ _LAZY = {
     "convert_file": ("ifcusd.converter", "convert_file"),
     "ConversionReport": ("ifcusd.report", "ConversionReport"),
     "validate_usd": ("ifcusd.validate", "validate_usd"),
+    "UsdToIfcConverter": ("ifcusd.reverse.converter", "UsdToIfcConverter"),
+    "IfcExportResult": ("ifcusd.reverse.converter", "IfcExportResult"),
+    "convert_usd_to_ifc": ("ifcusd.reverse.converter", "convert_usd_to_ifc"),
+    "IfcExportReport": ("ifcusd.reverse.report", "IfcExportReport"),
 }
 
 

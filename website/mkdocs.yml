@@ -140,6 +140,7 @@ nav:
       - Python API: guide/python-api.md
       - What gets written: guide/output.md
       - Omniverse and Unity: guide/omniverse-and-unity.md
+      - USD to IFC and robot data: guide/usd-to-ifc.md
       - Reports and validation: guide/validation.md
       - IFC5 (IFCX): guide/ifc5.md
       - Recipes: guide/recipes.md
@@ -147,6 +148,7 @@ nav:
   - Reference:
       - IFC ↔ USD mapping: reference/schema-mapping.md
       - USD schema: reference/usd-schema.md
+      - IFC extension for robot data: reference/ifc-extension.md
       - File formats: reference/file-formats.md
       - API reference: reference/api.md
   - About:

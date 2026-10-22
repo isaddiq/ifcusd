@@ -44,6 +44,18 @@ def _guid() -> str:
 
 
 def build_model(schema: str = "IFC4") -> ifcopenshell.file:
+    """Build the test model; IfcOpenShell's global owner settings are restored afterwards."""
+    import importlib
+
+    owner_settings = importlib.import_module("ifcopenshell.api.owner.settings")
+    previous = (owner_settings.get_user, owner_settings.get_application)
+    try:
+        return _build_model(schema)
+    finally:
+        owner_settings.get_user, owner_settings.get_application = previous
+
+
+def _build_model(schema: str) -> ifcopenshell.file:
     import importlib
 
     model = importlib.import_module("ifcopenshell.api.project").create_file(version=schema)

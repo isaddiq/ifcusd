@@ -1,4 +1,4 @@
-"""Command line interface: ``ifcusd convert | validate | info | schema``.
+"""Command line interface: ``ifcusd convert | to-ifc | validate | info | schema``.
 
 Exit codes: 0 success, 1 completed with problems (validation errors, or
 ``--strict`` and the conversion was not complete), 2 usage or environment
@@ -16,7 +16,16 @@ from typing import Any
 
 from ifcusd._version import SCHEMA_VERSION, __version__
 from ifcusd.bootstrap import DependencyInstallError, ensure_runtime_dependencies
-from ifcusd.options import MATERIAL_MODELS, NAMING_MODES, PROFILES, SPACE_MODES, ConversionOptions, default_thread_count
+from ifcusd.options import (
+    DEFAULT_EXCLUDE_PATHS,
+    MATERIAL_MODELS,
+    NAMING_MODES,
+    PROFILES,
+    SPACE_MODES,
+    ConversionOptions,
+    IfcExportOptions,
+    default_thread_count,
+)
 
 EXIT_OK, EXIT_PROBLEMS, EXIT_USAGE, EXIT_FAILED = 0, 1, 2, 3
 
@@ -24,7 +33,7 @@ EXIT_OK, EXIT_PROBLEMS, EXIT_USAGE, EXIT_FAILED = 0, 1, 2, 3
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ifcusd",
-        description="Convert IFC (IFC2X3, IFC4, IFC4X3, IFC5/IFCX) building models to OpenUSD.",
+        description="Convert IFC (IFC2X3, IFC4, IFC4X3, IFC5/IFCX) building models to OpenUSD, and back to IFC.",
     )
     parser.add_argument("--version", action="version", version=f"ifcusd {__version__} (schema {SCHEMA_VERSION})")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -150,6 +159,75 @@ def build_parser() -> argparse.ArgumentParser:
     info.add_argument("--json", action="store_true", help="Print JSON instead of text.")
     _add_common(info)
 
+    to_ifc = subparsers.add_parser(
+        "to-ifc",
+        help="Convert USD back to IFC, including data added in USD (robots, simulation...).",
+        description=(
+            "Convert a .usd, .usda, .usdc or .usdz stage to IFC. With --source, the original IFC file is "
+            "updated with what changed or was added in USD (merge mode); without it the IFC model is "
+            "rebuilt from USD alone (standalone mode)."
+        ),
+    )
+    to_ifc.add_argument("input", type=Path, help="Input .usd, .usda, .usdc or .usdz file.")
+    to_ifc.add_argument("output", type=Path, help="Output .ifc file.")
+    to_ifc.add_argument("--source", type=Path, help="The IFC file the USD was converted from (merge mode).")
+    to_ifc.add_argument(
+        "--layer",
+        action="append",
+        default=[],
+        type=Path,
+        help="Additional USD layer composed on top, e.g. a recorded robot run (repeatable; later layers win).",
+    )
+    to_ifc.add_argument("--schema", help="IFC schema in standalone mode (default: the stage's, else IFC4).")
+    to_ifc.add_argument(
+        "--time", default="earliest", help="Stage time to export: earliest (default), latest, default or a time code."
+    )
+    export_data = to_ifc.add_argument_group("data")
+    export_data.add_argument("--no-attributes", action="store_true", help="Do not write changed IFC attributes.")
+    export_data.add_argument("--no-properties", action="store_true", help="Do not write changed or new properties.")
+    export_data.add_argument(
+        "--no-placements", action="store_true", help="Do not move products whose transform changed."
+    )
+    export_data.add_argument(
+        "--no-new-objects",
+        action="store_true",
+        help="Ignore prims without IFC identity (robots, sensors, obstacles...).",
+    )
+    export_data.add_argument("--no-geometry", action="store_true", help="Do not write geometry for new elements.")
+    export_data.add_argument("--no-physics", action="store_true", help="Do not write UsdPhysics data (IfcUSD_Physics).")
+    export_data.add_argument(
+        "--no-semantics", action="store_true", help="Do not write semantic labels as classifications."
+    )
+    export_data.add_argument("--no-time-series", action="store_true", help="Write time-sampled values as plain values.")
+    export_data.add_argument(
+        "--no-trajectories", action="store_true", help="Do not write trajectories of animated prims."
+    )
+    export_data.add_argument(
+        "--no-templates", action="store_true", help="Do not declare new property sets as IfcPropertySetTemplates."
+    )
+    export_data.add_argument(
+        "--namespace",
+        action="append",
+        default=[],
+        help="Extension namespace collected into property sets (repeatable; default: robot and sim).",
+    )
+    export_data.add_argument("--new-object-class", help="IFC class for new prims (default: IfcBuildingElementProxy).")
+    export_data.add_argument(
+        "--exclude", action="append", default=[], help="fnmatch pattern of prim paths to ignore (repeatable)."
+    )
+    export_data.add_argument("--time-origin", help="ISO 8601 date and time of USD time code 0, for time series.")
+    export_outputs = to_ifc.add_argument_group("outputs and checks")
+    export_outputs.add_argument("--report", type=Path, help="Write the JSON export report here.")
+    export_outputs.add_argument(
+        "--validate", action="store_true", help="Validate the written IFC file against its schema (exit 1 on errors)."
+    )
+    export_outputs.add_argument(
+        "--no-schema-fallback",
+        action="store_true",
+        help="Fail instead of reading a source with an unknown IFC schema version using the closest supported one.",
+    )
+    _add_common(to_ifc)
+
     schema = subparsers.add_parser("schema", help="Locate or print the IfcUSD USD schema plugin.")
     schema.add_argument("--print", dest="print_schema", action="store_true", help="Print schema.usda.")
     _add_common(schema)
@@ -182,6 +260,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "convert":
             return _convert(args)
+        if args.command == "to-ifc":
+            return _to_ifc(args)
         if args.command == "validate":
             return _validate(args)
         if args.command == "info":
@@ -262,6 +342,10 @@ class _Progress:
 def _convert(args: argparse.Namespace) -> int:
     from ifcusd.converter import convert_file
 
+    if args.input.suffix.lower() in (".usd", ".usda", ".usdc", ".usdz"):
+        print(f"error: {args.input.name} is a USD file; use `ifcusd to-ifc` to convert USD to IFC", file=sys.stderr)
+        return EXIT_USAGE
+
     try:
         options = _options(args)
     except ValueError as exc:
@@ -300,6 +384,80 @@ def _convert(args: argparse.Namespace) -> int:
         if not validation.ok:
             status = EXIT_PROBLEMS
     return status
+
+
+# ---------------------------------------------------------------------- to-ifc
+
+
+def _export_options(args: argparse.Namespace) -> IfcExportOptions:
+    overrides: dict[str, Any] = {"time": args.time, "schema_fallback": not args.no_schema_fallback}
+    if args.schema:
+        overrides["schema"] = args.schema
+    flags = {
+        "no_attributes": "update_attributes",
+        "no_properties": "update_properties",
+        "no_placements": "update_placements",
+        "no_new_objects": "include_new_objects",
+        "no_geometry": "include_geometry",
+        "no_physics": "include_physics",
+        "no_semantics": "include_semantics",
+        "no_time_series": "include_time_series",
+        "no_trajectories": "include_trajectories",
+        "no_templates": "property_templates",
+    }
+    for flag, name in flags.items():
+        if getattr(args, flag):
+            overrides[name] = False
+    if args.namespace:
+        overrides["extension_namespaces"] = tuple(args.namespace)
+    if args.new_object_class:
+        overrides["new_object_class"] = args.new_object_class
+    if args.exclude:
+        overrides["exclude_paths"] = DEFAULT_EXCLUDE_PATHS + tuple(args.exclude)
+    if args.time_origin:
+        overrides["time_origin"] = args.time_origin
+    return IfcExportOptions(**overrides)
+
+
+def _to_ifc(args: argparse.Namespace) -> int:
+    from ifcusd.reverse.converter import convert_usd_to_ifc
+
+    try:
+        options = _export_options(args)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    result = convert_usd_to_ifc(
+        args.input,
+        args.output,
+        options,
+        source=args.source,
+        layers=args.layer or None,
+        report_path=args.report,
+        validate=args.validate,
+    )
+    report = result.report
+    if report is not None and not args.quiet:
+        for line in report.summary_lines():
+            print(line)
+        if args.verbose:
+            for warning in report.warnings:
+                print(f"warning: {warning}")
+            for item in report.created_objects:
+                print(f"new {item['ifcClass']} {item['globalId']} {item['name']!r} from {item['usdPath']}")
+            for item in report.not_in_usd:
+                print(f"not in USD (kept): {item['ifcClass']} {item['globalId']} {item.get('name') or ''}")
+        if args.validate and report.validation and not report.validation.get("ok"):
+            limit = 100 if args.verbose else 10
+            for issue in report.validation.get("issues", [])[:limit]:
+                origin = " (already in the source)" if issue.get("inSource") else ""
+                print(
+                    f"invalid{origin}: {issue.get('instance', '')[:120]} "
+                    f"{issue.get('attribute', '')}: {issue.get('message', '')}"
+                )
+    if args.validate and report is not None and report.introduced_errors:
+        return EXIT_PROBLEMS
+    return EXIT_OK
 
 
 # ---------------------------------------------------------------------- validate / info / schema

@@ -1,10 +1,11 @@
 # Command line
 
-The `ifcusd` command has four subcommands:
+The `ifcusd` command has five subcommands:
 
 | Command | Purpose |
 | --- | --- |
 | [`ifcusd convert`](#ifcusd-convert) | Convert `.ifc`, `.ifczip` or `.ifcx` to `.usd`, `.usda`, `.usdc` or `.usdz` |
+| [`ifcusd to-ifc`](#ifcusd-to-ifc) | Convert USD back to `.ifc`, with the changes and robot data added in USD |
 | [`ifcusd validate`](#ifcusd-validate) | Validate a converted file, optionally against its IFC source |
 | [`ifcusd info`](#ifcusd-info) | Summarize an IFC or IFCX file |
 | [`ifcusd schema`](#ifcusd-schema) | Locate or print the IfcUSD USD schema plugin |
@@ -96,6 +97,36 @@ Data left out with these switches is reported as `skipped`.
 | `-q`, `--quiet` | Print errors only |
 | `--install-deps` | `pip install` missing runtime dependencies before running |
 
+## `ifcusd to-ifc`
+
+```text
+ifcusd to-ifc INPUT OUTPUT [--source IFC] [--layer USD]... [options]
+```
+
+| Argument | Description |
+| --- | --- |
+| `INPUT` | `.usd`, `.usda`, `.usdc` or `.usdz` file |
+| `OUTPUT` | `.ifc` file; folders are created |
+| `--source IFC` | The IFC file `INPUT` was converted from. It is updated with what changed or was added in USD (merge mode). Without it the model is rebuilt from USD (standalone mode). |
+| `--layer USD` | Extra USD layer composed on top, e.g. a recorded robot run (repeatable; later layers win) |
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--schema` | the stage's, else `IFC4` | IFC schema in standalone mode (`IFC2X3`, `IFC4`, `IFC4X3_ADD2`) |
+| `--time` | `earliest` | Stage time exported: `earliest`, `latest`, `default` or a time code |
+| `--no-attributes`, `--no-properties`, `--no-placements` | | Do not write changed attributes, property values or transforms |
+| `--no-new-objects`, `--no-geometry` | | Ignore prims without IFC identity; or create them without geometry |
+| `--no-physics`, `--no-semantics`, `--no-time-series`, `--no-trajectories` | | Skip `UsdPhysics` data, semantic labels, time series or trajectories |
+| `--no-templates` | | Do not declare new property sets as `IfcPropertySetTemplate`s |
+| `--namespace NS` | `robot`, `sim` | Attribute namespace collected into property sets (repeatable) |
+| `--new-object-class` | `IfcBuildingElementProxy` | Class of new elements |
+| `--exclude PATTERN` | | `fnmatch` pattern of prim paths to ignore (repeatable) |
+| `--time-origin` | `1970-01-01T00:00:00` | Date and time of time code 0 for time series |
+| `--report FILE` | | Write the JSON export report |
+| `--validate` | | Validate the output against its IFC schema; exit `1` if the export introduced errors |
+
+See [USD to IFC and robot data](usd-to-ifc.md) for what is written and how.
+
 ## `ifcusd validate`
 
 ```text
@@ -167,4 +198,10 @@ ifcusd convert hello-wall.ifcx hello-wall.usda --layer fire-rating.ifcx
 
 # Check an existing conversion against its source
 ifcusd validate model.usdc --source model.ifc --json validation.json
+
+# Write a robot training run back into the original IFC model
+ifcusd to-ifc model.usdc model.trained.ifc --source model.ifc --layer robot_run.usda --validate
+
+# Rebuild IFC from a USD file alone
+ifcusd to-ifc model.usdc rebuilt.ifc --schema IFC4X3_ADD2
 ```

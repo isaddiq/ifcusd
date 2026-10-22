@@ -70,6 +70,35 @@ flowchart LR
 | `ifcusd.schema` | the codeless USD schema plugin |
 | `ifcusd.validate` | validation and completeness checks |
 
+The reverse direction (`ifcusd to-ifc`) lives in `ifcusd.reverse`:
+
+```mermaid
+flowchart LR
+    U[USD + layers] --> St[reverse.stage<br/>compose, classify prims]
+    I[source IFC] --> B
+    St --> B[reverse.builder<br/>match, create, diff]
+    B --> Pr[reverse.properties<br/>sets, all property kinds]
+    B --> Ge[reverse.geometry<br/>tessellation, styles, mapped items]
+    B --> Ex[reverse.extension<br/>physics, time series, labels, templates]
+    Pr --> M[(IFC model)]
+    Ge --> M
+    Ex --> M
+```
+
+| Module | Responsibility |
+| --- | --- |
+| `ifcusd.reverse.converter` | orchestration, deterministic GlobalIds, owner history, header, validation |
+| `ifcusd.reverse.stage` | composing layers, the IFC frame, classifying prims (IFC prims, representations, new objects) |
+| `ifcusd.reverse.builder` | matching and creating entities; attributes, relationships, placements, geometry and sets in phases |
+| `ifcusd.reverse.properties` | reading `ifc:pset`/`ifc:qto`/namespace sets; building and updating every property kind |
+| `ifcusd.reverse.values`, `reverse.attributes` | USD value → IFC defined type with verified casts; unit conversion |
+| `ifcusd.reverse.geometry` | meshes and implicit gprims → `IfcTriangulatedFaceSet` / surface models, styles, mapped items |
+| `ifcusd.reverse.extension` | the IFC extension: physics, trajectories, time series, classifications, templates |
+
+The reverse writer compares USD with the source through the same
+`ifc.properties` extractor the forward converter uses, so unchanged data
+compares equal and an unchanged stage writes nothing.
+
 Three rules keep the output reproducible:
 
 1. Everything that becomes a prim is planned, sorted and named before
@@ -87,6 +116,9 @@ Three rules keep the output reproducible:
   structure changes.
 * Add a test in `tests/test_conversion.py` that checks the new output for all
   three schemas.
+* Mirror the change in `ifcusd.reverse` so USD still converts back to IFC:
+  `tests/test_reverse.py` rebuilds every test model from USD and checks that
+  objects, values, relationships and geometry survive the round trip.
 
 ## Releasing
 

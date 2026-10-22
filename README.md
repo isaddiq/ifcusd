@@ -5,9 +5,10 @@
 <h1 align="center">IfcUSD</h1>
 
 <p align="center">
-  <strong>Convert IFC building models to OpenUSD without losing the BIM.</strong><br>
+  <strong>Convert IFC building models to OpenUSD without losing the BIM, and back.</strong><br>
   Geometry, spatial structure, every attribute, property and quantity, types, materials,<br>
-  classifications, groups and relationships, written as typed, documented USD data.
+  classifications, groups and relationships, written as typed, documented USD data.<br>
+  Robot and simulation results recorded in USD return to IFC as standard IFC data.
 </p>
 
 <p align="center">
@@ -37,6 +38,7 @@ through Pixar's `usd-core`, and proves that nothing was lost.
 
 ```text
 IFC2X3 · IFC4 · IFC4X3 · IFC5 ──▶ IfcUSD ──▶ .usd · .usda · .usdc · .usdz   (+ report.json, metadata.json)
+            .ifc ◀── IfcUSD ◀── .usd + robot / simulation layers               (ifcusd to-ifc)
 ```
 
 ## Highlights
@@ -60,6 +62,11 @@ IFC2X3 · IFC4 · IFC4X3 · IFC5 ──▶ IfcUSD ──▶ .usd · .usda · .us
 - **Ready for your target.** Profiles for NVIDIA Omniverse (OmniPBR, Replicator semantic
   labels), Unity 6 (Y-up, importer-safe, metadata sidecar plus editor script) and generic
   OpenUSD tools.
+- **Both directions.** `ifcusd to-ifc` writes USD back to IFC: into the original file (only what
+  changed is written) or as a model rebuilt from USD. New robots, sensors and obstacles become
+  IFC elements; physics, trajectories, sensor time series, semantic labels and `robot:*` data
+  become property sets, time series and classifications, declared as property set templates
+  inside the file.
 
 ## Install
 
@@ -115,6 +122,36 @@ for prim in stage.Traverse():
               prim.GetAttribute("ifc:qto:Qto_WallBaseQuantities:Length").Get())
 ```
 
+## Back to IFC, with robot data
+
+Train robots on the building in NVIDIA Omniverse or Isaac Sim, record what they learn in a USD
+layer, and write it into the IFC model for code checking, design and facility management:
+
+```bash
+ifcusd convert model.ifc model.usdc --profile omniverse
+# ... robot runs authored in robot_run.usda: robot:navigation:clearance, UsdPhysics, time samples ...
+ifcusd to-ifc model.usdc model.trained.ifc --source model.ifc --layer robot_run.usda --validate
+```
+
+```text
+source  model.ifc: matched 26 | attributes 1 | placements 1 | not in USD 1
+entities: created 1 | new objects 4 | duplicates 1 | relationships 3
+data: property sets +10 ~2 | values 23 | time series 2 | classifications 4 | templates 7
+validation: 1 error(s), 1 already in the source
+```
+
+```python
+from ifcusd import convert_usd_to_ifc
+
+result = convert_usd_to_ifc("model.usdc", "model.trained.ifc", source="model.ifc", layers=["robot_run.usda"])
+```
+
+IFC's schema cannot gain new entities, so the extension uses only standard mechanisms: property
+sets (`IfcUSD_Physics`, `IfcUSD_Simulation`, `Robot_Navigation`…) with IFC measure types in
+project units, `IfcTimeSeries`, classifications, and `IfcPropertySetTemplate`s in an
+`IfcProjectLibrary`. See [USD to IFC and robot data](https://isaddiq.github.io/ifcusd/guide/usd-to-ifc/)
+and the [IFC extension](https://isaddiq.github.io/ifcusd/reference/ifc-extension/).
+
 ## What gets written
 
 ```text
@@ -154,10 +191,12 @@ The website at **<https://isaddiq.github.io/ifcusd/>** covers:
   [Recipes](https://isaddiq.github.io/ifcusd/guide/recipes/) ·
   [Troubleshooting](https://isaddiq.github.io/ifcusd/guide/troubleshooting/)
 - [Omniverse and Unity](https://isaddiq.github.io/ifcusd/guide/omniverse-and-unity/) ·
+  [USD to IFC and robot data](https://isaddiq.github.io/ifcusd/guide/usd-to-ifc/) ·
   [Reports and validation](https://isaddiq.github.io/ifcusd/guide/validation/) ·
   [IFC5](https://isaddiq.github.io/ifcusd/guide/ifc5/)
 - [IFC ↔ USD mapping](https://isaddiq.github.io/ifcusd/reference/schema-mapping/) ·
   [USD schema](https://isaddiq.github.io/ifcusd/reference/usd-schema/) ·
+  [IFC extension](https://isaddiq.github.io/ifcusd/reference/ifc-extension/) ·
   [File formats](https://isaddiq.github.io/ifcusd/reference/file-formats/) ·
   [API reference](https://isaddiq.github.io/ifcusd/reference/api/)
 - [How IfcUSD compares with existing IFC → USD methods](https://isaddiq.github.io/ifcusd/about/related-work/)

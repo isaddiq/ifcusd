@@ -234,3 +234,110 @@ class ConversionOptions:
     @classmethod
     def field_names(cls) -> list[str]:
         return [f.name for f in fields(cls)]
+
+
+# Prims that NVIDIA Omniverse and Isaac Sim add to every stage and that are not part of
+# the modelled facility: viewport cameras, render settings and the default ground plane.
+DEFAULT_EXCLUDE_PATHS = ("/OmniverseKit_*", "/Render", "/Render/*", "*/defaultGroundPlane", "*/GroundPlane")
+TIME_KEYWORDS = ("earliest", "latest", "default")
+
+
+@dataclass(frozen=True)
+class IfcExportOptions:
+    """Options controlling USD to IFC conversion.
+
+    With a source IFC file (*merge* mode) the source is the starting point and
+    only what changed or was added in USD is written. Without one (*standalone*
+    mode) the whole IFC model is rebuilt from the stage.
+
+    Example:
+        ```python
+        from ifcusd import IfcExportOptions
+
+        options = IfcExportOptions(time="latest", extension_namespaces=("robot", "sim", "nav"))
+        ```
+
+    Attributes:
+        schema: Target IFC schema for standalone mode (``IFC2X3``, ``IFC4``,
+            ``IFC4X3_ADD2``). Defaults to the schema recorded in the stage, or
+            ``IFC4``. In merge mode the source schema is always kept.
+        time: Stage time whose values and transforms are exported:
+            ``"earliest"`` (default: the first time sample, or the default
+            value of static attributes), ``"latest"`` (the stage end time),
+            ``"default"`` (default values only) or a USD time code.
+        update_attributes: Write changed IFC attributes (``ifc:name``, ...) and
+            changed ``ifc:class`` values of existing entities.
+        update_properties: Write changed and new property and quantity values.
+        update_placements: Move existing products whose USD transform changed.
+        include_new_objects: Turn prims without IFC identity (robots, sensors,
+            obstacles, ...) into new IFC elements.
+        include_geometry: Write tessellated geometry for new elements (and for
+            every product in standalone mode).
+        include_physics: Write ``UsdPhysics`` data as the ``IfcUSD_Physics`` property set.
+        include_semantics: Write ``UsdSemantics`` labels as classification references.
+        include_time_series: Write time-sampled values as IFC time series.
+        include_trajectories: Write animated transforms as a ``Trajectory`` time
+            series in the ``IfcUSD_Simulation`` property set.
+        extension_namespaces: Attribute namespaces collected into property sets:
+            ``robot:navigation:clearance`` becomes the property ``clearance`` of
+            the set ``Robot_Navigation`` and ``robot:battery`` the property
+            ``battery`` of ``Robot_Common``. Values in these namespaces are in
+            SI units (lengths in stage units), not project units.
+        property_templates: Declare every new, non-standard property set as an
+            ``IfcPropertySetTemplate`` in an ``IfcProjectLibrary`` (IFC4 and later).
+        new_object_class: IFC class for new prims that are neither robots nor
+            sensors and carry no ``ifc:class``.
+        exclude_paths: ``fnmatch`` patterns of prim paths to ignore.
+        time_origin: ISO 8601 date and time of USD time code 0, for time series.
+        schema_fallback: Read a source IFC with an unknown schema identifier
+            using the closest supported schema.
+    """
+
+    schema: str | None = None
+    time: str | float = "earliest"
+    update_attributes: bool = True
+    update_properties: bool = True
+    update_placements: bool = True
+    include_new_objects: bool = True
+    include_geometry: bool = True
+    include_physics: bool = True
+    include_semantics: bool = True
+    include_time_series: bool = True
+    include_trajectories: bool = True
+    extension_namespaces: tuple[str, ...] = ("robot", "sim")
+    property_templates: bool = True
+    new_object_class: str = "IfcBuildingElementProxy"
+    exclude_paths: tuple[str, ...] = DEFAULT_EXCLUDE_PATHS
+    time_origin: str = "1970-01-01T00:00:00"
+    schema_fallback: bool = True
+
+    def __post_init__(self) -> None:
+        if isinstance(self.time, str) and self.time not in TIME_KEYWORDS:
+            try:
+                object.__setattr__(self, "time", float(self.time))
+            except ValueError:
+                raise ValueError(f"time must be one of {TIME_KEYWORDS} or a number, got {self.time!r}") from None
+        for namespace in self.extension_namespaces:
+            if not namespace or not namespace.replace("_", "a").isalnum() or namespace == "ifc":
+                raise ValueError(f"invalid extension namespace {namespace!r}")
+        if not self.new_object_class.startswith("Ifc"):
+            raise ValueError(f"new_object_class must be an IFC class name, got {self.new_object_class!r}")
+        from datetime import datetime
+
+        try:
+            datetime.fromisoformat(self.time_origin)
+        except ValueError:
+            raise ValueError(f"time_origin must be an ISO 8601 date and time, got {self.time_origin!r}") from None
+        object.__setattr__(self, "extension_namespaces", tuple(self.extension_namespaces))
+        object.__setattr__(self, "exclude_paths", tuple(self.exclude_paths))
+
+    def with_changes(self, **changes: Any) -> IfcExportOptions:
+        """Copy of these options with some fields changed."""
+        return replace(self, **changes)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serializable view of the options (used for provenance metadata)."""
+        data = asdict(self)
+        data["extension_namespaces"] = list(self.extension_namespaces)
+        data["exclude_paths"] = list(self.exclude_paths)
+        return data
