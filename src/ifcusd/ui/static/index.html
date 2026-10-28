@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ifcusd-token" content="{{TOKEN}}">
+<title>IfcUSD Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231c2630'/%3E%3Cpath d='M7 22V10h4v12zM15 10h10M15 16h7M15 22h10' stroke='%234fc2a8' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="bar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="6"/><path d="M7 22V10h4v12zM15 10h10M15 16h7M15 22h10"/></svg>
+    <span>IfcUSD Studio</span>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-convert" aria-controls="convert" aria-selected="true" data-view="convert">Convert</button>
+    <button role="tab" id="tab-inspect" aria-controls="inspect" aria-selected="false" data-view="inspect" tabindex="-1">Inspect</button>
+    <button role="tab" id="tab-schema" aria-controls="schema" aria-selected="false" data-view="schema" tabindex="-1">Schema</button>
+  </nav>
+  <p class="version" id="version"></p>
+</header>
+
+<main id="main">
+  <section id="convert" class="view" role="tabpanel" aria-labelledby="tab-convert">
+    <div class="direction">
+      <h1 class="ends" aria-live="polite">
+        <span class="end end-from" id="end-from">IFC</span>
+        <button class="swap" id="swap" type="button" aria-label="Swap direction: convert OpenUSD to IFC">
+          <svg viewBox="0 0 40 24" aria-hidden="true"><path d="M4 8h30m-6-5 6 5-6 5M36 16H6m6-5-6 5 6 5"/></svg>
+        </button>
+        <span class="end end-to" id="end-to">OpenUSD</span>
+      </h1>
+      <p class="lede" id="lede"></p>
+    </div>
+    <div class="sides">
+      <div class="side side-from" id="side-from"></div>
+      <div class="side side-to" id="side-to"></div>
+    </div>
+    <form class="options" id="options" aria-label="Conversion options"></form>
+    <div class="run">
+      <button class="primary" id="run" type="button" disabled>Convert to OpenUSD</button>
+      <p class="hint" id="run-hint">Choose a file to convert.</p>
+      <label class="check" id="validate"></label>
+    </div>
+    <section class="result" id="result" aria-live="polite" hidden></section>
+  </section>
+
+  <section id="inspect" class="view" role="tabpanel" aria-labelledby="tab-inspect" hidden>
+    <div class="inspect-head">
+      <label class="field">
+        <span>File</span>
+        <select id="inspect-file"></select>
+      </label>
+      <button type="button" class="quiet" id="inspect-remove">Remove from list</button>
+      <dl class="facts" id="facts"></dl>
+    </div>
+    <div class="browser">
+      <div class="tree-pane">
+        <label class="search">
+          <span class="sr">Find in the model</span>
+          <input type="search" id="search" placeholder="Find by name, class or GlobalId" autocomplete="off">
+        </label>
+        <ul class="tree" id="tree" role="tree" aria-label="Model structure"></ul>
+      </div>
+      <div class="detail-pane" id="detail" tabindex="-1"></div>
+    </div>
+  </section>
+
+  <section id="schema" class="view" role="tabpanel" aria-labelledby="tab-schema" hidden>
+    <div class="schema" id="schema-body"></div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

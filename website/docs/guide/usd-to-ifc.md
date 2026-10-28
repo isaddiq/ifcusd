@@ -263,6 +263,18 @@ both changed, the simulation's value is used. `UsdPhysics` stores 32-bit
 floats, so values are compared at that precision: a mass of
 `1840.123456789` kg survives any number of round trips unchanged.
 
+Removing physics in the simulation is written back too. If you remove the
+rigid body from a table in Isaac Sim (*Remove > Physics > Rigid Body*), the
+table's `RigidBodyEnabled` becomes `false`; removing the colliders from its
+meshes sets `CollisionEnabled` to `false`. This works whether you saved the
+edit in a separate layer or in the converted file itself. A removed
+`PhysicsMassAPI` keeps the IFC `Mass`, because IFC properties are never
+deleted. Set a new mass instead.
+
+A centre of mass authored on a scaled prim, such as a robot asset referenced
+at 0.01 scale, is scaled with it, because the scale is baked into the
+element's geometry.
+
 The Unity profile and `--no-physics` leave physics out.
 
 ## Limitations

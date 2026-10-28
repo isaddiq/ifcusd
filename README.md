@@ -83,6 +83,23 @@ Python 3.10 – 3.14 on Windows, macOS or Linux. The dependencies (`ifcopenshell
 [Installation](https://isaddiq.github.io/ifcusd/getting-started/installation/) for virtual
 environments, NVIDIA Omniverse Kit and the optional USD schema plugin.
 
+## IfcUSD Studio
+
+To convert without the command line, start the browser UI:
+
+```bash
+ifcusd ui          # installed with pip
+python app.py      # from a clone of this repository, with the dependencies installed
+```
+
+Your browser opens on IfcUSD Studio. Drop in an IFC model and get an OpenUSD
+stage for Omniverse, Isaac Sim or Unity, or swap the direction to write a USD
+stage, with the edits and physics from your simulation, back into IFC. The
+Inspect tab browses either kind of file: spatial structure, IFC attributes,
+property sets, physics and the USD schemas behind them. The Schema tab
+explains how IFC maps to USD. The Studio runs on your computer only, and
+your files stay there. See [IfcUSD Studio](https://isaddiq.github.io/ifcusd/guide/studio/).
+
 ## Quick start
 
 ```bash
@@ -194,7 +211,8 @@ The website at **[https://isaddiq.github.io/ifcusd/](https://isaddiq.github.io/i
 - [Installation](https://isaddiq.github.io/ifcusd/getting-started/installation/) ·
   [Quick start](https://isaddiq.github.io/ifcusd/getting-started/quickstart/) ·
   [Tutorial](https://isaddiq.github.io/ifcusd/getting-started/tutorial/)
-- [Command line](https://isaddiq.github.io/ifcusd/guide/cli/) ·
+- [IfcUSD Studio](https://isaddiq.github.io/ifcusd/guide/studio/) ·
+  [Command line](https://isaddiq.github.io/ifcusd/guide/cli/) ·
   [Python API](https://isaddiq.github.io/ifcusd/guide/python-api/) ·
   [Recipes](https://isaddiq.github.io/ifcusd/guide/recipes/) ·
   [Troubleshooting](https://isaddiq.github.io/ifcusd/guide/troubleshooting/)
@@ -212,7 +230,8 @@ The website at **[https://isaddiq.github.io/ifcusd/](https://isaddiq.github.io/i
 ## Repository layout
 
 ```text
-src/ifcusd/            the Python package (the only code pip installs)
+src/ifcusd/            the Python package (the only code pip installs); ui/ is IfcUSD Studio
+app.py                 starts IfcUSD Studio from a source checkout
 tests/                 test suite; IFC models are generated with IfcOpenShell's API
 ifc/                   sample IFC files
 integrations/unity/    Unity editor script and component for the metadata sidecar

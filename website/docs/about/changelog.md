@@ -43,7 +43,16 @@ data, and physics carried through the whole loop. Mapping version 1.1.
   stage units with `kilogramsPerUnit = 1` (`physics` option, `--no-physics`;
   off for Unity). `ifcusd to-ifc` reads both forms and compares physics at
   32-bit precision, so unchanged values never drift and an edit in either
-  form is written.
+  form is written. A rigid body or collider removed in the simulation is
+  written back as `RigidBodyEnabled` / `CollisionEnabled` `false` (the
+  applied schemas are listed in `customData.ifc.physicsSchemas`), and a
+  centre of mass on a scaled prim is scaled with its geometry.
+- **IfcUSD Studio** (`ifcusd ui`, `ifcusd-studio`, or `python app.py` in a
+  source checkout): a local browser UI for converting IFC to USD and back,
+  browsing the structure and data of either kind of file (IFC attributes,
+  property sets, physics in both forms, applied schemas), and reading the
+  IFC ↔ USD mapping, the schema plugin and the IFC extension. Standard
+  library only; listens on `127.0.0.1` with a per-session token.
 - `IfcExportOptions`, `IfcExportReport` (counts, new elements, products not in
   USD, warnings) and schema validation that separates errors the export
   introduced from those the source already had (`--validate`).

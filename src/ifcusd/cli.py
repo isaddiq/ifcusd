@@ -1,4 +1,4 @@
-"""Command line interface: ``ifcusd convert | to-ifc | validate | info | schema``.
+"""Command line interface: ``ifcusd convert | to-ifc | validate | info | schema | ui``.
 
 Exit codes: 0 success, 1 completed with problems (validation errors, or
 ``--strict`` and the conversion was not complete), 2 usage or environment
@@ -236,6 +236,17 @@ def build_parser() -> argparse.ArgumentParser:
     schema = subparsers.add_parser("schema", help="Locate or print the IfcUSD USD schema plugin.")
     schema.add_argument("--print", dest="print_schema", action="store_true", help="Print schema.usda.")
     _add_common(schema)
+
+    ui = subparsers.add_parser(
+        "ui",
+        help="Open IfcUSD Studio, the browser UI for converting and browsing files.",
+        description="Start IfcUSD Studio on this computer and open it in the web browser.",
+    )
+    ui.add_argument("--port", type=int, default=8765, help="Port to listen on (the next free one is used if taken).")
+    ui.add_argument("--host", default="127.0.0.1", help="Address to listen on (default: this computer only).")
+    ui.add_argument("--no-browser", action="store_true", help="Do not open the web browser.")
+    ui.add_argument("--workspace", type=Path, help="Folder for uploaded and converted files (default: a temp folder).")
+    _add_common(ui)
     return parser
 
 
@@ -271,6 +282,8 @@ def main(argv: list[str] | None = None) -> int:
             return _validate(args)
         if args.command == "info":
             return _info(args)
+        if args.command == "ui":
+            return _ui(args)
     except IfcUsdError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_FAILED
@@ -558,4 +571,15 @@ def _schema(args: argparse.Namespace) -> int:
                 f"Set PXR_PLUGINPATH_NAME={path} to register the IfcUSD schema (version {SCHEMA_VERSION}).",
                 file=sys.stderr,
             )
+    return EXIT_OK
+
+
+def _ui(args: argparse.Namespace) -> int:
+    from ifcusd.ui import serve
+
+    try:
+        serve(args.host, args.port, open_browser=not args.no_browser, workspace=args.workspace)
+    except OSError as exc:
+        print(f"error: could not start IfcUSD Studio: {exc}", file=sys.stderr)
+        return EXIT_FAILED
     return EXIT_OK

@@ -40,6 +40,11 @@ PROPERTY_DESCRIPTIONS = {
     },
 }
 
+# Key in a prim's ``customData.ifc`` listing the UsdPhysics schemas ``ifcusd convert``
+# applied for IfcUSD_Physics (collision schemas: on the prim's meshes). ``ifcusd to-ifc``
+# reads a listed schema that is no longer applied as removed in the simulation.
+PHYSICS_SCHEMAS_KEY = "physicsSchemas"
+
 # Values of UsdPhysics.MeshCollisionAPI's physics:approximation.
 COLLISION_APPROXIMATIONS = (
     "none",

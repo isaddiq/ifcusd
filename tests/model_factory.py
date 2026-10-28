@@ -288,3 +288,37 @@ def write_model(directory: Path, schema: str = "IFC4") -> Path:
     path = directory / f"test_{schema}.ifc"
     build_model(schema).write(str(path))
     return path
+
+
+PHYSICS_MASS = 1840.123456789  # more digits than a 32-bit float holds
+
+
+def write_physics_model(source: Path, target: Path) -> Path:
+    """``source`` with IfcUSD_Physics on every wall, as ``ifcusd to-ifc`` writes it."""
+    import ifcopenshell.api.pset
+
+    model = ifcopenshell.open(str(source))
+
+    def value(cls: str, raw):
+        return model.create_entity(cls, raw)
+
+    for wall in model.by_type("IfcWall"):
+        pset = ifcopenshell.api.pset.add_pset(model, product=wall, name="IfcUSD_Physics")
+        single = [
+            ("Mass", value("IfcMassMeasure", PHYSICS_MASS)),
+            ("Density", value("IfcMassDensityMeasure", 2400.0)),
+            ("RigidBodyEnabled", value("IfcBoolean", True)),
+            ("KinematicEnabled", value("IfcBoolean", True)),
+            ("CollisionEnabled", value("IfcBoolean", True)),
+            ("CollisionApproximation", value("IfcLabel", "convexHull")),
+            ("StaticFriction", value("IfcReal", 0.7)),
+            ("DynamicFriction", value("IfcReal", 0.5)),
+            ("Restitution", value("IfcReal", 0.05)),
+            ("Articulated", value("IfcBoolean", False)),
+        ]
+        properties = [model.create_entity("IfcPropertySingleValue", Name=n, NominalValue=v) for n, v in single]
+        center = [value("IfcLengthMeasure", c) for c in (2500.0, 100.0, 1500.0)]  # millimetres
+        properties.append(model.create_entity("IfcPropertyListValue", Name="CenterOfMass", ListValues=center))
+        pset.HasProperties = properties
+    model.write(str(target))
+    return target

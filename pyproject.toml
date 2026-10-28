@@ -50,6 +50,7 @@ Changelog = "https://isaddiq.github.io/ifcusd/about/changelog/"
 
 [project.scripts]
 ifcusd = "ifcusd.cli:main"
+ifcusd-studio = "ifcusd.ui:main"
 
 [tool.hatch.version]
 path = "src/ifcusd/_version.py"
@@ -66,6 +67,7 @@ include = [
   "/integrations",
   "/ifc",
   "/convert_ifc_to_usd.py",
+  "/app.py",
   "/README.md",
   "/CITATION.cff",
   "/LICENSE",

@@ -136,6 +136,7 @@ nav:
       - Quick start: getting-started/quickstart.md
       - Tutorial: getting-started/tutorial.md
   - User guide:
+      - IfcUSD Studio (UI): guide/studio.md
       - Command line: guide/cli.md
       - Python API: guide/python-api.md
       - What gets written: guide/output.md

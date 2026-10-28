@@ -31,6 +31,14 @@ def ifc_files(model_dir: Path) -> dict[str, Path]:
 
 
 @pytest.fixture(scope="session")
+def physics_ifc(ifc_files: dict[str, Path], model_dir: Path) -> Path:
+    """The IFC4 test model with IfcUSD_Physics on both walls (as ``ifcusd to-ifc`` writes it)."""
+    from model_factory import write_physics_model
+
+    return write_physics_model(ifc_files["IFC4"], model_dir / "physics.ifc")
+
+
+@pytest.fixture(scope="session")
 def converted(ifc_files: dict[str, Path], model_dir: Path):
     """Each synthetic model converted once with default options: {schema: (ifc, usd, result)}."""
     from ifcusd import ConversionOptions, convert

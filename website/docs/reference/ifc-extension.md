@@ -48,10 +48,10 @@ meshes are read, for a new element its whole subtree.
 | --- | --- | --- | --- |
 | `Mass` | `IfcMassMeasure` | project mass unit (kg) | `physics:mass` (`MassAPI`) on the prim, else the sum over its bodies |
 | `Density` | `IfcMassDensityMeasure` | kg/m³ | `physics:density` on the prim, else of the bound physics material |
-| `CenterOfMass` | list of `IfcLengthMeasure` | project length unit | `physics:centerOfMass`, in the element's placement frame |
-| `RigidBodyEnabled` | `IfcBoolean` | | `physics:rigidBodyEnabled` (`RigidBodyAPI`) |
+| `CenterOfMass` | list of `IfcLengthMeasure` | project length unit | `physics:centerOfMass`, in the element's placement frame (with the prim's scale applied) |
+| `RigidBodyEnabled` | `IfcBoolean` | | `physics:rigidBodyEnabled` (`RigidBodyAPI`); `false` when the simulation removed the `RigidBodyAPI` that `ifcusd convert` applied |
 | `KinematicEnabled` | `IfcBoolean` | | `physics:kinematicEnabled` |
-| `CollisionEnabled` | `IfcBoolean` | | any `CollisionAPI` with `physics:collisionEnabled` |
+| `CollisionEnabled` | `IfcBoolean` | | any `CollisionAPI` with `physics:collisionEnabled`; `false` when the simulation removed the colliders `ifcusd convert` applied |
 | `CollisionApproximation` | `IfcLabel` | | `physics:approximation` (`MeshCollisionAPI`), e.g. `convexHull` |
 | `StaticFriction` | `IfcReal` | | physics material bound to the colliders with purpose `physics` |
 | `DynamicFriction` | `IfcReal` | | physics material of the colliders |

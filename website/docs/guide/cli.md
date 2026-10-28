@@ -1,6 +1,6 @@
 # Command line
 
-The `ifcusd` command has five subcommands:
+The `ifcusd` command has six subcommands:
 
 | Command | Purpose |
 | --- | --- |
@@ -9,6 +9,7 @@ The `ifcusd` command has five subcommands:
 | [`ifcusd validate`](#ifcusd-validate) | Validate a converted file, optionally against its IFC source |
 | [`ifcusd info`](#ifcusd-info) | Summarize an IFC or IFCX file |
 | [`ifcusd schema`](#ifcusd-schema) | Locate or print the IfcUSD USD schema plugin |
+| [`ifcusd ui`](#ifcusd-ui) | Open [IfcUSD Studio](studio.md), the browser UI for converting and browsing files |
 
 `ifcusd --version` prints the package and mapping versions. `python -m ifcusd`
 works the same as `ifcusd`. From a source checkout without installing, use
@@ -160,6 +161,16 @@ ifcusd schema [--print]
 
 Prints the folder of the USD schema plugin (use it for
 `PXR_PLUGINPATH_NAME`), or with `--print` the schema source.
+
+## `ifcusd ui`
+
+```text
+ifcusd ui [--port 8765] [--host 127.0.0.1] [--no-browser] [--workspace DIR]
+```
+
+Starts [IfcUSD Studio](studio.md) and opens it in the web browser. It runs
+until you press ++ctrl+c++. `ifcusd-studio` and, from a source checkout,
+`python app.py` do the same.
 
 ## Exit codes
 

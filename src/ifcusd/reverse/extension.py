@@ -39,6 +39,7 @@ import numpy as np
 from ifcusd.dependencies import import_usd
 from ifcusd.extension import (
     LIBRARY_NAME,
+    PHYSICS_SCHEMAS_KEY,
     PHYSICS_SET,
     PROPERTY_DESCRIPTIONS,
     SEMANTICS_SOURCE,
@@ -83,11 +84,18 @@ def physics_set(scene: UsdScene, record: PrimRecord, factory: ValueFactory) -> S
         if center.HasAuthoredValue():
             point = [float(c) * mpu for c in attribute_value(center, scene.time)]
             if all(math.isfinite(c) and abs(c) < 1e30 for c in point):
+                # The prim frame becomes the rigid IFC placement; its scale is baked into
+                # the geometry, so the centre of mass is scaled the same way.
+                _placement, residual = rigid(scene.ifc_matrix_at(root, scene.time))
+                point = [float(c) for c in residual[:3, :3] @ np.array(point)]
                 values["CenterOfMass"] = (
                     "double3",
                     tuple(factory.from_si(point, "IfcLengthMeasure")),
                     "IfcLengthMeasure",
                 )
+    # Schemas ``ifcusd convert`` applied for IfcUSD_Physics: one that is gone was removed
+    # in the simulation (Isaac Sim's Remove > Physics), which disables it.
+    written = set(root.GetCustomDataByKey(f"ifc:{PHYSICS_SCHEMAS_KEY}") or ())
     if root.HasAPI(UsdPhysics.RigidBodyAPI):
         body = UsdPhysics.RigidBodyAPI(root)
         values["RigidBodyEnabled"] = (
@@ -98,7 +106,11 @@ def physics_set(scene: UsdScene, record: PrimRecord, factory: ValueFactory) -> S
         kinematic = body.GetKinematicEnabledAttr()
         if kinematic.HasAuthoredValue():
             values["KinematicEnabled"] = ("bool", bool(attribute_value(kinematic, scene.time)), "IfcBoolean")
+    elif "PhysicsRigidBodyAPI" in written:
+        values["RigidBodyEnabled"] = ("bool", False, "IfcBoolean")
     colliders = [p for p in prims if p.HasAPI(UsdPhysics.CollisionAPI)]
+    if not colliders and "PhysicsCollisionAPI" in written:
+        values["CollisionEnabled"] = ("bool", False, "IfcBoolean")
     if colliders:
         enabled = any(
             UsdPhysics.CollisionAPI(p).GetCollisionEnabledAttr().Get(scene.time) is not False for p in colliders

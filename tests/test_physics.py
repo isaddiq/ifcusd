@@ -5,44 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from model_factory import PHYSICS_MASS
 
 from ifcusd import ConversionOptions, convert, convert_usd_to_ifc, validate_usd
 
-MASS = 1840.123456789  # more digits than a 32-bit float holds
-
-
-@pytest.fixture(scope="module")
-def physics_ifc(ifc_files, tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """The IFC4 test model with IfcUSD_Physics on both walls (as ``ifcusd to-ifc`` writes it)."""
-    import ifcopenshell
-    import ifcopenshell.api.pset
-
-    model = ifcopenshell.open(str(ifc_files["IFC4"]))
-
-    def value(cls: str, raw):
-        return model.create_entity(cls, raw)
-
-    for wall in model.by_type("IfcWall"):
-        pset = ifcopenshell.api.pset.add_pset(model, product=wall, name="IfcUSD_Physics")
-        single = [
-            ("Mass", value("IfcMassMeasure", MASS)),
-            ("Density", value("IfcMassDensityMeasure", 2400.0)),
-            ("RigidBodyEnabled", value("IfcBoolean", True)),
-            ("KinematicEnabled", value("IfcBoolean", True)),
-            ("CollisionEnabled", value("IfcBoolean", True)),
-            ("CollisionApproximation", value("IfcLabel", "convexHull")),
-            ("StaticFriction", value("IfcReal", 0.7)),
-            ("DynamicFriction", value("IfcReal", 0.5)),
-            ("Restitution", value("IfcReal", 0.05)),
-            ("Articulated", value("IfcBoolean", False)),
-        ]
-        properties = [model.create_entity("IfcPropertySingleValue", Name=n, NominalValue=v) for n, v in single]
-        center = [value("IfcLengthMeasure", c) for c in (2500.0, 100.0, 1500.0)]  # millimetres
-        properties.append(model.create_entity("IfcPropertyListValue", Name="CenterOfMass", ListValues=center))
-        pset.HasProperties = properties
-    path = tmp_path_factory.mktemp("physics") / "physics.ifc"
-    model.write(str(path))
-    return path
+MASS = PHYSICS_MASS  # more digits than a 32-bit float holds
 
 
 @pytest.fixture(scope="module")
@@ -74,6 +41,8 @@ def test_physics_becomes_usd_physics(physics_ifc: Path, physics_usd: Path) -> No
     assert mesh.HasAPI(UsdPhysics.CollisionAPI) and mesh.HasAPI(UsdPhysics.MeshCollisionAPI)
     assert UsdPhysics.MeshCollisionAPI(mesh).GetApproximationAttr().Get() == "convexHull"
     assert not wall.HasAPI(UsdPhysics.ArticulationRootAPI)  # one merged mesh is no articulation
+    applied = list(wall.GetCustomDataByKey("ifc:physicsSchemas"))
+    assert applied == ["PhysicsMassAPI", "PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]
     materials = []
     for name in ("Wall 1", "Wall 2"):
         bound, _rel = UsdShade.MaterialBindingAPI(_prim(stage, name).GetChild("Body")).ComputeBoundMaterial("physics")
@@ -137,6 +106,67 @@ def test_edits_in_the_simulation_and_on_ifc_data_are_both_written(
     assert walls["Wall 1"]["StaticFriction"] == pytest.approx(0.7)
     assert walls["Wall 2"]["Mass"] == MASS  # untouched element, untouched values
     assert walls["Wall 2"]["Restitution"] == pytest.approx(0.05)
+
+
+def _remove_wall_physics(stage) -> None:
+    from pxr import UsdPhysics
+
+    wall = _prim(stage, "Wall 1")
+    wall.RemoveAPI(UsdPhysics.RigidBodyAPI)  # Isaac Sim: Remove > Physics > Rigid Body
+    wall.GetChild("Body").RemoveAPI(UsdPhysics.CollisionAPI)
+
+
+@pytest.mark.parametrize("where", ["layer", "in place"])
+def test_physics_removed_in_the_simulation_is_disabled(
+    physics_ifc: Path, physics_usd: Path, tmp_path: Path, where: str
+) -> None:
+    import shutil
+
+    import ifcopenshell.util.element as element
+    from pxr import Usd
+
+    if where == "layer":
+        usd = physics_usd
+        layers = [_edit(physics_usd, tmp_path / "removed.usda", _remove_wall_physics)]
+    else:  # edited and saved in the converted file itself, as Isaac Sim does by default
+        usd = Path(shutil.copy(physics_usd, tmp_path / "saved.usda"))
+        stage = Usd.Stage.Open(str(usd))
+        _remove_wall_physics(stage)
+        stage.GetRootLayer().Save()
+        layers = []
+    result = convert_usd_to_ifc(usd, tmp_path / "removed.ifc", source=physics_ifc, layers=layers)
+    walls = {w.Name: element.get_psets(w)["IfcUSD_Physics"] for w in result.model.by_type("IfcWall")}
+    assert walls["Wall 1"]["RigidBodyEnabled"] is False
+    assert walls["Wall 1"]["CollisionEnabled"] is False
+    assert walls["Wall 1"]["Mass"] == MASS
+    assert walls["Wall 2"]["RigidBodyEnabled"] is True and walls["Wall 2"]["CollisionEnabled"] is True
+
+
+def test_physics_off_stage_round_trip_writes_nothing(physics_ifc: Path, tmp_path: Path) -> None:
+    usd = tmp_path / "no_physics.usda"
+    convert(physics_ifc, usd, ConversionOptions(threads=1, physics=False))
+    result = convert_usd_to_ifc(usd, tmp_path / "same.ifc", source=physics_ifc)
+    assert {k: v for k, v in result.report.counts.items() if v and k != "matched"} == {}
+
+
+def test_center_of_mass_follows_the_prim_scale(physics_ifc: Path, physics_usd: Path, tmp_path: Path) -> None:
+    import ifcopenshell.util.element as element
+    from pxr import Gf, UsdGeom, UsdPhysics
+
+    def edit(stage) -> None:
+        crate = UsdGeom.Xform.Define(stage, "/World/Crate")
+        crate.AddScaleOp().Set(Gf.Vec3f(2.0, 2.0, 2.0))
+        UsdGeom.Cube.Define(stage, "/World/Crate/Box").GetSizeAttr().Set(50.0)
+        mass = UsdPhysics.MassAPI.Apply(crate.GetPrim())
+        mass.GetMassAttr().Set(12.0)
+        mass.GetCenterOfMassAttr().Set(Gf.Vec3f(10.0, 0.0, 5.0))  # centimetres, before the scale
+
+    layer = _edit(physics_usd, tmp_path / "crate.usda", edit)
+    result = convert_usd_to_ifc(physics_usd, tmp_path / "crate.ifc", source=physics_ifc, layers=[layer])
+    crate = next(e for e in result.model.by_type("IfcProduct") if e.Name == "Crate")
+    physics = element.get_psets(crate)["IfcUSD_Physics"]
+    assert physics["Mass"] == pytest.approx(12.0)
+    assert physics["CenterOfMass"] == pytest.approx([200.0, 0.0, 100.0])  # millimetres, scaled
 
 
 @pytest.mark.parametrize(

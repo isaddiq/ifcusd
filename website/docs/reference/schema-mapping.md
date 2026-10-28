@@ -344,6 +344,11 @@ densities in stage units. The centre of mass is not written with
 `--world-coords`, where prims no longer carry the element's frame. The Unity
 profile and `--no-physics` leave the schemas out.
 
+The element prim's `customData.ifc.physicsSchemas` lists the schemas applied
+(for example `["PhysicsMassAPI", "PhysicsRigidBodyAPI", "PhysicsCollisionAPI"]`).
+`ifcusd to-ifc` uses it to tell a schema removed in the simulation from one
+that was never there.
+
 ---
 
 ## 4. The IfcUSD USD schema

@@ -30,11 +30,11 @@ from collections.abc import Sequence
 from dataclasses import astuple, dataclass
 from typing import Any
 
-from ifcusd.extension import COLLISION_APPROXIMATIONS, PHYSICS_SET
+from ifcusd.extension import COLLISION_APPROXIMATIONS, PHYSICS_SCHEMAS_KEY, PHYSICS_SET
 from ifcusd.ifc.properties import PropertySet
 from ifcusd.ifc.units import UnitResolver
 from ifcusd.naming import safe_identifier
-from ifcusd.usd.sdf import Gf, LayerWriter, set_display_name
+from ifcusd.usd.sdf import Gf, LayerWriter, Vt, set_display_name
 
 PHYSICS_MATERIALS_SCOPE = "PhysicsMaterials"
 
@@ -122,9 +122,16 @@ def physics_spec(
 
 def write_physics(
     writer: LayerWriter, prim: Any, spec: PhysicsSpec, *, colliders: Sequence[Any], material_path: str | None
-) -> None:
-    """Apply the physics of one element to its prim and its mesh prims (``colliders``)."""
+) -> list[str]:
+    """Apply the physics of one element to its prim and its mesh prims (``colliders``).
+
+    Returns the applied schemas, which are also listed in the prim's
+    ``customData.ifc.physicsSchemas``: ``ifcusd to-ifc`` reads a listed schema
+    that a simulation removed (Isaac Sim's Remove > Physics) as disabled.
+    """
+    applied = []
     if spec.has_mass:
+        applied.append("PhysicsMassAPI")
         writer.add_api_schemas(prim, ["PhysicsMassAPI"])
         if spec.mass is not None:
             writer.attribute(prim, "physics:mass", "float", spec.mass, uniform=False)
@@ -133,11 +140,13 @@ def write_physics(
         if spec.center_of_mass is not None:
             writer.attribute(prim, "physics:centerOfMass", "point3f", Gf.Vec3f(*spec.center_of_mass), uniform=False)
     if spec.rigid_body_enabled is not None:
+        applied.append("PhysicsRigidBodyAPI")
         writer.add_api_schemas(prim, ["PhysicsRigidBodyAPI"])
         writer.attribute(prim, "physics:rigidBodyEnabled", "bool", spec.rigid_body_enabled, uniform=False)
         if spec.kinematic_enabled is not None:
             writer.attribute(prim, "physics:kinematicEnabled", "bool", spec.kinematic_enabled, uniform=False)
-    if spec.collision_enabled is not None:
+    if spec.collision_enabled is not None and colliders:
+        applied.append("PhysicsCollisionAPI")
         for collider in colliders:
             writer.add_api_schemas(collider, ["PhysicsCollisionAPI"])
             writer.attribute(collider, "physics:collisionEnabled", "bool", spec.collision_enabled, uniform=False)
@@ -150,6 +159,13 @@ def write_physics(
         for collider in colliders:
             writer.add_api_schemas(collider, ["MaterialBindingAPI"])
             writer.relationship(collider, "material:binding:physics", [material_path])
+    if applied:
+        data = dict(prim.customData) if prim.customData else {}
+        ifc_data = dict(data.get("ifc", {}))
+        ifc_data[PHYSICS_SCHEMAS_KEY] = Vt.StringArray(applied)
+        data["ifc"] = ifc_data
+        prim.customData = data
+    return applied
 
 
 def physics_material_name(material: tuple[float | None, float | None, float | None]) -> str:
