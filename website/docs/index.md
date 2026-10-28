@@ -13,21 +13,23 @@ hide:
 <h1>IFC to <span class="ifc-gradient">OpenUSD</span>,<br>without losing the BIM.</h1>
 
 <p class="ifc-hero__lead">
-IfcUSD is a Python package and command-line tool. It converts building
-models in every IFC version to OpenUSD, including geometry, spatial
+IfcUSD is a Python package, a command-line tool and a browser UI. It
+converts building models in every IFC version to OpenUSD, including geometry, spatial
 structure, every attribute, property and quantity, types, materials,
 classifications, groups and relationships, and proves that nothing was
-lost. It also converts back: robot and simulation results recorded in USD
-return to the IFC model as standard, self-describing IFC data.
+lost. It also converts back: robot and simulation results recorded in USD,
+physics included, return to the IFC model as standard, self-describing IFC
+data, and the next conversion hands them to the simulation again.
 </p>
 
 [Get started :material-arrow-right:](getting-started/installation.md){ .md-button .md-button--primary }
 [Quick start](getting-started/quickstart.md){ .md-button }
+[IfcUSD Studio](guide/studio.md){ .md-button }
 [:fontawesome-brands-github: GitHub](https://github.com/isaddiq/ifcusd){ .md-button }
 
 <div class="ifc-pills">
 <span>IFC2X3</span><span>IFC4</span><span>IFC4X3</span><span>IFC5 · IFCX</span>
-<span>USD → IFC</span><span>NVIDIA Omniverse</span><span>Unity 6</span><span>Python 3.10 – 3.14</span><span>MIT</span>
+<span>USD → IFC</span><span>Browser UI</span><span>NVIDIA Omniverse</span><span>Unity 6</span><span>Python 3.10 – 3.14</span><span>MIT</span>
 </div>
 
 </div>
@@ -45,7 +47,9 @@ coverage of 117 IfcRoot instances: prim 40, native 57,
          attributes 20, filtered 0, skipped 0, <span class="t-ok">missing 0</span>
 <span class="t-ok">completed in 0.31s (complete)</span>
 model.usdc: <span class="t-ok">OK</span> (0 errors, 0 warnings)
-  missingObjects: <span class="t-ok">0</span>   missingPropertyValues: <span class="t-ok">0</span></code></pre>
+  missingObjects: <span class="t-ok">0</span>   missingPropertyValues: <span class="t-ok">0</span>
+<span class="t-prompt">$</span> ifcusd ui
+<span class="t-dim">IfcUSD Studio is running at http://127.0.0.1:8765/</span></code></pre>
 </div>
 
 </div>
@@ -121,7 +125,8 @@ model.usdc: <span class="t-ok">OK</span> (0 errors, 0 warnings)
 
     `ifcusd to-ifc` writes USD back to IFC: edited values, moved objects,
     new robots and sensors, physics, trajectories and sensor time series,
-    as property sets and templates any IFC tool can read.
+    as property sets and templates any IFC tool can read. The next
+    `ifcusd convert` turns the physics back into native `UsdPhysics`.
 
     [:octicons-arrow-right-24: USD to IFC and robot data](guide/usd-to-ifc.md)
 
@@ -146,6 +151,13 @@ model.usdc: <span class="t-ok">OK</span> (0 errors, 0 warnings)
 <div><strong>Write</strong><p>Typed attributes, property sets, relationships and collections, then multithreaded tessellation and instancing.</p></div>
 <div><strong>Verify</strong><p>Coverage report, OpenUSD validators and a round-trip completeness check against the source IFC.</p></div>
 </div>
+
+<h2 class="ifc-section-title">Or point and click</h2>
+<p class="ifc-section-lead">IfcUSD Studio runs in your browser, on your computer. Convert in either direction, browse the IFC data and physics of any file, and read how IFC maps to USD. Start it with <code>ifcusd ui</code>, or <code>python app.py</code> in a clone of the repository.</p>
+
+![IfcUSD Studio converting an IFC model for Omniverse and Isaac Sim](assets/studio-convert.png){ loading=lazy width="880" style="display:block;margin:0 auto;border:1px solid var(--md-default-fg-color--lightest);border-radius:8px" }
+
+[Open the IfcUSD Studio guide :octicons-arrow-right-24:](guide/studio.md)
 
 <h2 class="ifc-section-title">Built for your target</h2>
 
@@ -206,12 +218,13 @@ model.usdc: <span class="t-ok">OK</span> (0 errors, 0 warnings)
 | Other relationships | relationship prims under `/World/IfcData/Relationships` |
 | Surface styles | `UsdPreviewSurface` (+ OmniPBR) materials |
 | Units, georeferencing, header | `ifc:units:*`, `ifc:geo:*`, `ifc:file:*` on `/World` |
+| `IfcUSD_Physics`, stored by a previous simulation | `UsdPhysics` mass, rigid bodies, colliders and physics materials |
 
 <div class="ifc-cta" markdown>
 
 ## Convert your first model in two minutes
 
-Install with pip, run one command, open the result in Omniverse, Unity or usdview.
+Install with pip, then run one command or open IfcUSD Studio. Open the result in Omniverse, Isaac Sim, Unity or usdview.
 
 [Install IfcUSD](getting-started/installation.md){ .md-button .md-button--primary }
 [Follow the tutorial](getting-started/tutorial.md){ .md-button }

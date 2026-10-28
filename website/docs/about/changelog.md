@@ -51,13 +51,18 @@ data, and physics carried through the whole loop. Mapping version 1.1.
   source checkout): a local browser UI for converting IFC to USD and back,
   browsing the structure and data of either kind of file (IFC attributes,
   property sets, physics in both forms, applied schemas), and reading the
-  IFC ↔ USD mapping, the schema plugin and the IFC extension. Standard
-  library only; listens on `127.0.0.1` with a per-session token.
+  IFC ↔ USD mapping, the schema plugin and the IFC extension. Each result
+  offers the next step of the loop (*Set up the way back to IFC*, *Convert
+  this to OpenUSD*). Standard library only; listens on `127.0.0.1` with a
+  per-session token. `app.py` offers to install missing dependencies.
 - `IfcExportOptions`, `IfcExportReport` (counts, new elements, products not in
   USD, warnings) and schema validation that separates errors the export
   introduced from those the source already had (`--validate`).
-- Documentation: [USD to IFC and robot data](../guide/usd-to-ifc.md) and the
-  [IFC extension](../reference/ifc-extension.md) specification.
+- Documentation: [USD to IFC and robot data](../guide/usd-to-ifc.md), the
+  [IFC extension](../reference/ifc-extension.md) specification and
+  [IfcUSD Studio](../guide/studio.md). The [tutorial](../getting-started/tutorial.md)
+  now covers the whole loop, from IFC to a simulation's physics and back,
+  with the command line and in the Studio.
 
 ### Fixed
 

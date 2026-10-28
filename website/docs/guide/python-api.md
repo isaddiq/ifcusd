@@ -220,5 +220,20 @@ import ifcusd.schema
 ifcusd.schema.plugin_path()     # folder with plugInfo.json
 ifcusd.schema.register()        # register with OpenUSD (before opening stages)
 ifcusd.schema.ENTITY_API        # "IfcEntityAPI"
-ifcusd.SCHEMA_VERSION           # "1.0"
+ifcusd.SCHEMA_VERSION           # "1.1"
 ```
+
+## IfcUSD Studio
+
+[IfcUSD Studio](studio.md) can be started from Python as well, for example
+from a launcher script with its own workspace folder:
+
+```python
+from ifcusd.ui import serve
+
+serve(port=8765, open_browser=True, workspace="studio-files")   # runs until Ctrl+C
+```
+
+`make_server()` returns the server without starting it, which suits tests
+and embedding: run `server.serve_forever()` in a thread and stop it with
+`server.shutdown()`.

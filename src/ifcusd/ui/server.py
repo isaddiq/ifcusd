@@ -143,6 +143,7 @@ class Job:
         return {
             "id": self.id,
             "direction": self.direction,
+            "input": self.request.get("input"),
             "status": self.status,
             "stage": self.stage,
             "fraction": self.fraction,
@@ -624,7 +625,20 @@ class _Handler(BaseHTTPRequestHandler):
 def make_server(
     host: str = "127.0.0.1", port: int = DEFAULT_PORT, *, studio: Studio | None = None
 ) -> tuple[ThreadingHTTPServer, Studio]:
-    """A server on the first free port from ``port`` (``0`` picks any free port)."""
+    """Create the IfcUSD Studio server without starting it.
+
+    Args:
+        host: Address to listen on. Loopback addresses (the default) accept this
+            computer only; any other address switches off opening files by path.
+        port: First port to try; the next free one up to 19 higher is used if
+            it is taken. ``0`` picks any free port.
+        studio: Session state (files, jobs); a new one in a temporary
+            workspace by default.
+
+    Returns:
+        ``(server, studio)``. Run ``server.serve_forever()``, in a thread if
+        needed, and stop it with ``server.shutdown()``.
+    """
     from ifcusd import schema
 
     schema.register()  # schema-aware browsing (IfcEntityAPI ...) when no stage is open yet
@@ -656,7 +670,16 @@ def serve(
     open_browser: bool = True,
     workspace: Path | None = None,
 ) -> None:
-    """Run IfcUSD Studio until interrupted (Ctrl+C)."""
+    """Run IfcUSD Studio until interrupted (Ctrl+C), as ``ifcusd ui`` does.
+
+    Args:
+        host: Address to listen on; ``127.0.0.1`` keeps the Studio private to
+            this computer.
+        port: First port to try; the next free one is used if it is taken.
+        open_browser: Open the Studio in the default web browser.
+        workspace: Folder for uploaded and converted files; ``ifcusd-studio``
+            in the system's temporary folder by default.
+    """
     server, studio = make_server(host, port, studio=Studio(workspace))
     shown = "127.0.0.1" if host in ("0.0.0.0", "::") else host
     url = f"http://{shown}:{server.server_address[1]}/"

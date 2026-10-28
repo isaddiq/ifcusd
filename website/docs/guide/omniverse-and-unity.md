@@ -43,7 +43,9 @@ ifcusd convert model.ifc model.usdc --profile omniverse --validate
 * **Physics.** Models that went through `ifcusd to-ifc` carry the
   `IfcUSD_Physics` property set; it is written as `UsdPhysics` mass, rigid
   body, collider and physics-material schemas, so Isaac Sim simulates them
-  as they were. See [USD to IFC and robot data](usd-to-ifc.md#physics-comes-back-as-physics).
+  as they were. Edit them in Isaac Sim, save your changes as a layer, and
+  `ifcusd to-ifc --layer` writes them back, including rigid bodies or
+  colliders you removed. See [USD to IFC and robot data](usd-to-ifc.md#physics-comes-back-as-physics).
 * **Schema-aware tools (optional).** To make Kit's USD runtime know the IfcUSD
   API schemas, add the schema folder to the plugin path before Kit starts:
 

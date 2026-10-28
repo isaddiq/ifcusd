@@ -48,6 +48,10 @@ Linux, so installation needs no compiler.
     python -m pip install -e ".[dev]"
     ```
 
+    To try the browser UI from the clone without installing IfcUSD at all,
+    run `python app.py`. If IfcOpenShell, `usd-core` or NumPy is missing, it
+    offers to install it with pip for the Python you ran it with.
+
 === "From PyPI"
 
     ```bash
@@ -70,7 +74,7 @@ ifcusd --version
 ```
 
 ```text
-ifcusd 1.0.0 (schema 1.0)
+ifcusd 1.1.0 (schema 1.1)
 ```
 
 Convert one of the sample files in the repository (or any IFC file you have):
@@ -80,6 +84,15 @@ ifcusd convert ifc/Architecture.ifc out/Architecture.usda --validate
 ```
 
 The last lines should read `completed … (complete)` and `OK (0 errors …)`.
+
+Then open the browser UI:
+
+```bash
+ifcusd ui
+```
+
+Your browser opens [IfcUSD Studio](../guide/studio.md) at
+`http://127.0.0.1:8765/`. Press ++ctrl+c++ in the terminal to stop it.
 
 ## Inside NVIDIA Omniverse Kit
 

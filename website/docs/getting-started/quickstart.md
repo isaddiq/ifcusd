@@ -1,5 +1,17 @@
 # Quick start
 
+## Convert in the browser
+
+```bash
+ifcusd ui
+```
+
+[IfcUSD Studio](../guide/studio.md) opens in your browser. Drop an IFC file on
+the left, pick a target (*Omniverse and Isaac Sim*, *Unity* or *Any OpenUSD
+tool*) and select **Convert to OpenUSD**. Download the result, or open it
+under **Inspect** to browse its structure and IFC data. In a clone of the
+repository, `python app.py` does the same without installing IfcUSD.
+
 ## Convert from the command line
 
 ```bash
@@ -81,6 +93,21 @@ for prim in stage.Traverse():
         )
 ```
 
+## Bring simulation results back to IFC
+
+Save your changes in Isaac Sim or another OpenUSD tool as a layer of their
+own, then update the IFC model with them:
+
+```bash
+ifcusd to-ifc model.usdc model.updated.ifc --source model.ifc --layer edits.usda
+```
+
+Only what changed is written: edited values, moved objects, new robots and
+sensors, and physics as the `IfcUSD_Physics` property set. Converting
+`model.updated.ifc` again gives the next simulation that physics as native
+`UsdPhysics`. The [tutorial](tutorial.md#7-give-the-kitchen-physics-as-a-simulation-would)
+walks through the whole loop.
+
 ## Next steps
 
 <div class="grid cards" markdown>
@@ -89,9 +116,27 @@ for prim in stage.Traverse():
 
     ---
 
-    A guided first conversion: inspect, convert, read back and validate.
+    The whole loop: convert, validate, add physics in USD, write it back to
+    IFC and convert again.
 
     [:octicons-arrow-right-24: Tutorial](tutorial.md)
+
+-   :material-cursor-default-click:{ .lg .middle } __IfcUSD Studio__
+
+    ---
+
+    The browser UI: convert both ways and browse IFC data, physics and the
+    mapping.
+
+    [:octicons-arrow-right-24: IfcUSD Studio](../guide/studio.md)
+
+-   :material-swap-horizontal:{ .lg .middle } __USD to IFC__
+
+    ---
+
+    Robots, sensors, physics and trajectories from USD into the IFC model.
+
+    [:octicons-arrow-right-24: USD to IFC and robot data](../guide/usd-to-ifc.md)
 
 -   :material-console:{ .lg .middle } __Command line__
 

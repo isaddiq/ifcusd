@@ -20,6 +20,13 @@ series and classifications, and the
 [IFC extension](../reference/ifc-extension.md) that describes them travels
 inside the file as property set templates.
 
+!!! tip "Prefer a UI?"
+    [IfcUSD Studio](studio.md) runs the same conversion in the browser: swap
+    the direction to **OpenUSD → IFC**, add your edit layers, choose the source
+    model and convert. The [tutorial](../getting-started/tutorial.md#7-give-the-kitchen-physics-as-a-simulation-would)
+    takes a model through the whole loop, with the command line and in the
+    Studio.
+
 ## Two modes
 
 | | Merge (`--source`) | Standalone |

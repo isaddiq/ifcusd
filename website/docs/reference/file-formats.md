@@ -60,10 +60,10 @@ by Unity's built-in `JsonUtility`.
 ```json title="model.ifcusd.json (abridged)"
 {
   "format": "ifcusd-metadata/1",
-  "converterVersion": "1.0.0",
-  "schemaVersion": "1.0",
+  "converterVersion": "1.1.0",
+  "schemaVersion": "1.1",
   "source": "Architecture.ifc",
-  "sourceSha256": "3ff9b10b…",
+  "sourceSha256": "a2e088d6…",
   "ifcSchema": "IFC4",
   "usdFile": "Architecture.usdz",
   "objects": [
@@ -105,13 +105,13 @@ Every output records its origin in the root layer's `customLayerData`:
     customLayerData = {
         dictionary ifcusd = {
             string converter = "IfcUSD"
-            string converterVersion = "1.0.0"
-            string schemaVersion = "1.0"
+            string converterVersion = "1.1.0"
+            string schemaVersion = "1.1"
             string ifcSchema = "IFC4"
             string ifcopenshellVersion = "0.9.0.post1"
             string usdVersion = "0.26.8"
             string sourceName = "Architecture.ifc"
-            string sourceSha256 = "3ff9b10b…"
+            string sourceSha256 = "a2e088d6…"
             string profile = "generic"
             dictionary options = { … }
         }

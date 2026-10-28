@@ -13,7 +13,8 @@ The `ifcusd` command has six subcommands:
 
 `ifcusd --version` prints the package and mapping versions. `python -m ifcusd`
 works the same as `ifcusd`. From a source checkout without installing, use
-`python convert_ifc_to_usd.py <input> <output> [options]`.
+`python convert_ifc_to_usd.py <input> <output> [options]`, or `python app.py`
+for [IfcUSD Studio](studio.md), the browser UI.
 
 ## `ifcusd convert`
 

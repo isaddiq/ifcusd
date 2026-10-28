@@ -65,9 +65,11 @@ flowchart LR
 | `ifcusd.ifc.styles` | IFC surface styles → PBR material descriptions |
 | `ifcusd.ifc.geometry` | tessellation through IfcOpenShell |
 | `ifcusd.usd.scene` | writing the plan, property sets, relationships, geometry, instancing |
+| `ifcusd.usd.physics` | `IfcUSD_Physics` → `UsdPhysics` mass, rigid body, collider and physics-material schemas |
 | `ifcusd.usd.sdf`, `usd.geometry`, `usd.materials` | Sdf-level authoring helpers |
 | `ifcusd.ifcx` | IFC5 composition and conversion |
 | `ifcusd.schema` | the codeless USD schema plugin |
+| `ifcusd.extension` | the vocabulary of the IFC extension, shared by both directions |
 | `ifcusd.validate` | validation and completeness checks |
 
 The reverse direction (`ifcusd to-ifc`) lives in `ifcusd.reverse`:
@@ -98,6 +100,19 @@ flowchart LR
 The reverse writer compares USD with the source through the same
 `ifc.properties` extractor the forward converter uses, so unchanged data
 compares equal and an unchanged stage writes nothing.
+
+IfcUSD Studio lives in `ifcusd.ui` and uses only the standard library:
+
+| Module | Responsibility |
+| --- | --- |
+| `ifcusd.ui.server` | the local HTTP server and JSON API: files, a one-at-a-time conversion queue, session token and `Host` checks |
+| `ifcusd.ui.inspect` | read-only, JSON-ready views of IFC models, USD stages and the schema, served one tree level at a time |
+| `ifcusd.ui/static` | the page: plain HTML, CSS and JavaScript with no build step and no external requests |
+
+The UI calls the same `convert_file` and `convert_usd_to_ifc` as the command
+line and adds no conversion logic of its own. `tests/test_ui.py` drives the
+API over HTTP. For changes to the page itself, also check it in a browser,
+in light and dark mode and at phone width.
 
 Three rules keep the output reproducible:
 

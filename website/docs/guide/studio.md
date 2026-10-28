@@ -74,6 +74,14 @@ copy the path of the saved file (to open it straight in Isaac Sim or
 usdview), or open the result under **Inspect**. A reload keeps the latest
 result in view.
 
+The result also offers the next step of the loop:
+
+* after IFC → OpenUSD, **Set up the way back to IFC** swaps the direction
+  with the new stage as input and the IFC it came from as the model to
+  update. Add the layer you saved from the simulation and convert;
+* after OpenUSD → IFC, **Convert this to OpenUSD** swaps back with the
+  updated model as input, ready for the next simulation run.
+
 ## Inspect
 
 ![Inspecting a wall converted for Isaac Sim: structure, applied schemas, IFC attributes and IfcUSD_Physics](../assets/studio-inspect.png)

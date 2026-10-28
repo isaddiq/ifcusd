@@ -129,6 +129,29 @@ def test_convert_both_ways_and_inspect(studio, physics_ifc: Path) -> None:
     assert ifc["name"] == "physics model.updated.ifc"
     assert {k: v for k, v in back["report"]["counts"].items() if v and k != "matched"} == {}  # nothing changed
 
+    # an edit layer from the simulation, composed on top in the UI
+    from pxr import Sdf, Usd, UsdPhysics
+
+    edits = Path(usd["location"]).with_name("sim.usda")
+    stage = Usd.Stage.Open(usd["location"])
+    layer = Sdf.Layer.CreateNew(str(edits))
+    stage.GetSessionLayer().subLayerPaths.append(layer.identifier)
+    stage.SetEditTarget(layer)
+    wall_prim = stage.GetPrimAtPath(wall["id"])
+    UsdPhysics.MassAPI(wall_prim).GetMassAttr().Set(2000.0)
+    layer.Save()
+    layer_entry = _call(base, token, "/api/open-path", method="POST", body={"path": str(edits)})
+    edited = _call(
+        base,
+        token,
+        "/api/convert",
+        method="POST",
+        body={"direction": "to-ifc", "input": usd["id"], "source": uploaded["id"], "layers": [layer_entry["id"]]},
+    )
+    edited = _wait(base, token, edited["id"])
+    assert edited["status"] == "done", edited
+    assert edited["report"]["counts"]["propertyValues"] == 1  # only the mass changed
+
     tree = _call(base, token, f"/api/files/{ifc['id']}/children?path=")
     assert tree["nodes"][0]["ifcClass"] == "IfcProject"
     walls = _call(base, token, f"/api/files/{ifc['id']}/search?q=IfcWall")["nodes"]

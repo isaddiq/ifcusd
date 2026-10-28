@@ -13,8 +13,8 @@ from ifcusd import (
 )
 ```
 
-Modules under `ifcusd.ifc`, `ifcusd.ifcx`, `ifcusd.usd` and `ifcusd.reverse`
-(other than the converter and report documented here) are internal and may
+Modules under `ifcusd.ifc`, `ifcusd.ifcx`, `ifcusd.usd`, `ifcusd.reverse` and
+`ifcusd.ui` (other than the functions documented here) are internal and may
 change between minor releases.
 
 ## Converting
@@ -86,6 +86,12 @@ change between minor releases.
       members:
         - plugin_path
         - register
+
+## IfcUSD Studio
+
+::: ifcusd.ui.server.serve
+
+::: ifcusd.ui.server.make_server
 
 ## Errors
 

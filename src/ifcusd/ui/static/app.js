@@ -375,15 +375,31 @@ function renderConvert() {
   renderRun();
 }
 
-$("#swap").addEventListener("click", () => {
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function setDirection(direction) {
   const ends = $(".ends");
   ends.classList.add("swapping");
   setTimeout(() => {
-    state.direction = state.direction === "to-usd" ? "to-ifc" : "to-usd";
+    state.direction = direction;
     renderConvert();
     ends.classList.remove("swapping");
-  }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200);
-});
+  }, reducedMotion() ? 0 : 200);
+}
+$("#swap").addEventListener("click", () => setDirection(state.direction === "to-usd" ? "to-ifc" : "to-usd"));
+
+// The next step of the loop: a converted stage goes back to IFC, an updated model on to USD.
+function continueFrom(job, output) {
+  if (job.direction === "to-usd") {
+    Object.assign(state.toIfc, { input: output.id, source: job.input, layers: [] });
+    setDirection("to-ifc");
+  } else {
+    state.toUsd.input = output.id;
+    setDirection("to-usd");
+  }
+  show("convert");
+  window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+}
 
 $("#run").addEventListener("click", async () => {
   const toUsd = state.direction === "to-usd";
@@ -458,7 +474,9 @@ function renderJob() {
     box.append(h("div", { class: "outputs" },
       h("a", { class: "download", href: downloadUrl(output.id), download: output.name }, `Download ${output.name}`, h("span", { text: fmtSize(output.size) })),
       h("button", { type: "button", class: "quiet", onclick: () => { state.inspect.file = output.id; state.inspect.selected = null; show("inspect"); } }, "Inspect the result"),
-      h("button", { type: "button", class: "quiet", onclick: () => downloadJson(job.report, output.name.replace(/\.[^.]+$/, ".report.json")) }, "Download the report")),
+      h("button", { type: "button", class: "quiet", onclick: () => downloadJson(job.report, output.name.replace(/\.[^.]+$/, ".report.json")) }, "Download the report"),
+      h("button", { type: "button", class: "quiet", onclick: () => continueFrom(job, output) },
+        job.direction === "to-usd" ? "Set up the way back to IFC" : "Convert this to OpenUSD")),
       h("p", { class: "location" }, "Saved at", h("code", { text: output.location }),
         h("button", { type: "button", class: "link", onclick: () => copy(output.location) }, "Copy path")));
   }
