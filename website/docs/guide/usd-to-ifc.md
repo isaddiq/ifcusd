@@ -54,7 +54,7 @@ output  model.trained.ifc  [IFC4, merge]
 source  model.ifc: matched 26 | attributes 1 | placements 1 | not in USD 1
 entities: created 1 | new objects 4 | duplicates 1 | relationships 3
 data: property sets +10 ~2 | values 23 | time series 2 | classifications 4 | templates 7
-geometry: representations 3 | triangles 648
+geometry: representations 3 | triangles 648 | styles 2 | materials 0
 validation: 1 error(s), 1 already in the source
 completed in 0.16s (1 warning(s))
 invalid (already in the source): #255=IfcTask('33SLfgqmf3M9qv5h2$WaGS',$,'Build walls',...) IfcTask.IsMilestone: Attribute not optional
@@ -182,6 +182,37 @@ default site, building and storey when the model has none).
 To choose the class yourself, author `ifc:class` (and optionally
 `ifc:predefinedType`, `ifc:objectType`, `ifc:name`) on the prim.
 
+### Colours and materials
+
+Every render material becomes an `IfcSurfaceStyle` with its colour and
+transparency, assigned to the geometry it covers. The colour is read from
+the material whatever network it uses:
+
+| Material in USD | Colour taken from |
+| --- | --- |
+| `UsdPreviewSurface` | `diffuseColor`, `opacity` |
+| OmniPBR and other MDL materials | `diffuse_color_constant` (OmniPBR's own 0.2 grey when not set), `opacity_constant` when `enable_opacity` is on |
+| OmniSurface | `diffuse_reflection_color`, `geometry_opacity` |
+| MaterialX / OpenPBR standard surface | `base_color`, `opacity` |
+| OmniGlass | `glass_color` |
+
+Inputs connected to the material's own interface (as Omniverse authors them
+when you promote a parameter) are followed to their value. A textured input
+has no single colour, so the mesh's `displayColor` is used when it has one.
+A material bound per face with `GeomSubset`s gives each part its own style.
+A mesh without any material keeps its `displayColor`, one style per face
+colour when the colour varies per face.
+
+A new element is also *made of* its USD materials: each one becomes an
+`IfcMaterial` of the same name with that surface style, associated with the
+element. An element with several materials gets an
+`IfcMaterialConstituentSet` (an `IfcMaterialList` in IFC2X3). Elements
+sharing a USD material share the `IfcMaterial`. If the model already has a
+material of that name, it is reused as it is.
+
+The report's geometry line counts the styles and materials written:
+`geometry: representations 3 | triangles 648 | styles 2 | materials 0`.
+
 ## Units and time
 
 * `ifc:*` values are in IFC **project units**, exactly as `ifcusd convert`
@@ -288,6 +319,10 @@ The Unity profile and `--no-physics` leave physics out.
 
 * **Geometry of existing elements** is kept from the source in merge mode;
   edits to their meshes in USD are not written back. Only their placement is.
+  The same goes for their appearance: they keep the source model's styles
+  even if you bind another material in USD.
+* **Textures** are not written to IFC; a textured material contributes the
+  mesh's `displayColor`, or a neutral colour.
 * **Relationship edits** on existing elements (moving a wall prim to another
   storey, retyping it) are not written back in merge mode.
 * **Deletions** are reported, never applied.

@@ -101,7 +101,10 @@ class IfcExportReport:
             f"values {c.get('propertyValues', 0)} | time series {c.get('timeSeries', 0)} | "
             f"classifications {c.get('classificationReferences', 0)} | templates {c.get('templates', 0)}"
         )
-        lines.append(f"geometry: representations {c.get('representations', 0)} | triangles {c.get('triangles', 0)}")
+        lines.append(
+            f"geometry: representations {c.get('representations', 0)} | triangles {c.get('triangles', 0)} | "
+            f"styles {c.get('styles', 0)} | materials {c.get('materials', 0)}"
+        )
         if self.validation is not None:
             errors = self.validation.get("errors", 0)
             inherited = errors - self.validation.get("newErrors", errors)

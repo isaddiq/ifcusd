@@ -66,6 +66,17 @@ data, and physics carried through the whole loop. Mapping version 1.1.
 
 ### Fixed
 
+- **Colours in USD → IFC.** Every element came out in the same flat grey: the
+  material reader called `UsdShadeMaterial.ComputeSurfaceSource` with a list,
+  which current `usd-core` releases reject, so no material was ever read. Both
+  signatures now work, and IFC → USD → IFC keeps every colour.
+- Materials authored in Omniverse and Isaac Sim keep their colours too: MDL
+  (OmniPBR with its default colour, OmniSurface, OmniGlass), MaterialX and
+  OpenPBR surfaces, inputs promoted to the material's interface, textured
+  materials (through `displayColor`), materials bound for the `full` or
+  `preview` purpose, and per-face `displayColor` on meshes without materials.
+  New elements also get their USD materials as `IfcMaterial`s carrying those
+  styles. The report counts the styles and materials written.
 - The test model factory no longer leaks IfcOpenShell owner settings from the
   IFC2X3 model into the IFC4 and IFC4X3 models.
 

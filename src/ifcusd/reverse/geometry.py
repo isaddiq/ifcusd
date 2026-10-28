@@ -8,8 +8,13 @@ robots are often built from (``Cube``, ``Sphere``, ``Cylinder``, ``Cone``,
 * ``IfcShellBasedSurfaceModel`` of triangular faces (IFC2X3, type ``SurfaceModel``)
 
 Every distinct render material becomes an ``IfcSurfaceStyle`` (reusing the
-source style when the USD material came from it). Instanced prims that share
-a prototype become ``IfcMappedItem`` instances of one ``IfcRepresentationMap``.
+source style when the USD material came from it). Colours are read from
+UsdPreviewSurface, MDL (OmniPBR, OmniSurface, OmniGlass) and MaterialX
+networks, through material interface connections; a textured material takes
+the mesh's ``displayColor``. Meshes without materials keep per-face
+``displayColor``. New elements also get their USD materials as
+``IfcMaterial``. Instanced prims that share a prototype become
+``IfcMappedItem`` instances of one ``IfcRepresentationMap``.
 """
 
 from __future__ import annotations
@@ -20,11 +25,13 @@ from dataclasses import dataclass
 from typing import Any
 
 import ifcopenshell.api.context
+import ifcopenshell.api.material
 import ifcopenshell.api.style
 import ifcopenshell.util.representation
 import numpy as np
 
 from ifcusd.dependencies import import_usd
+from ifcusd.ifc.util import attr as util_attr
 from ifcusd.reverse.attributes import create
 from ifcusd.reverse.stage import UsdScene
 from ifcusd.reverse.values import ValueFactory
@@ -118,7 +125,10 @@ def triangulate(counts: np.ndarray, indices: np.ndarray) -> tuple[np.ndarray, np
 def _partitions(
     prim: Any, faces: np.ndarray | None, time: Any, synthetic: str | None
 ) -> list[tuple[np.ndarray | None, Appearance | None]]:
-    """Triangle selections per material: ``GeomSubset`` partitions, then the rest of the mesh."""
+    """Triangle selections per material: ``GeomSubset`` partitions, then the rest of the mesh.
+
+    A mesh without materials whose ``displayColor`` varies per face is split by colour.
+    """
     own = appearance(prim, time, synthetic)
     if faces is None:
         return [(None, own)]
@@ -133,6 +143,8 @@ def _partitions(
         if s.GetElementTypeAttr().Get() == UsdGeom.Tokens.face and s.GetFamilyNameAttr().Get() == "materialBind"
     ]
     if not subsets:
+        if own is not None and own.key.startswith("color:"):
+            return _color_partitions(prim, faces, time) or [(None, own)]
         return [(None, own)]
     covered = np.zeros(len(faces), dtype=bool)
     result: list[tuple[np.ndarray | None, Appearance | None]] = []
@@ -140,80 +152,195 @@ def _partitions(
         face_ids = np.asarray(subset.GetIndicesAttr().Get(time) or [], dtype=np.int64)
         selection = np.isin(faces, face_ids)
         covered |= selection
-        result.append((selection, appearance(subset.GetPrim(), time, synthetic) or own))
+        result.append((selection, appearance(subset.GetPrim(), time, synthetic, gprim=prim) or own))
     if not covered.all():
         result.append((~covered, own))
     return result
 
 
-def appearance(prim: Any, time: Any, synthetic: str | None = None) -> Appearance | None:
+MAX_FACE_COLORS = 64  # more distinct face colours than this is a colour map, not materials
+
+
+def _color_partitions(prim: Any, faces: np.ndarray, time: Any) -> list[tuple[np.ndarray, Appearance]] | None:
+    """Triangles grouped by per-face ``displayColor`` (uniform, vertex or faceVarying), or ``None``."""
+    if not prim.IsA(UsdGeom.Mesh):
+        return None
+    mesh = UsdGeom.Mesh(prim)
+    primvar = mesh.GetDisplayColorPrimvar()
+    colors = primvar.ComputeFlattened(time)
+    counts = mesh.GetFaceVertexCountsAttr().Get(time)
+    indices = mesh.GetFaceVertexIndicesAttr().Get(time)
+    if not colors or len(colors) < 2 or counts is None or indices is None:
+        return None
+    colors = np.round(np.asarray(colors, dtype=np.float64).reshape(-1, 3), 3)
+    counts = np.asarray(counts, dtype=np.int64)
+    starts = np.concatenate(([0], np.cumsum(counts)[:-1]))
+    interpolation = primvar.GetInterpolation()
+    if interpolation == UsdGeom.Tokens.uniform and len(colors) == len(counts):
+        per_face = colors
+    elif interpolation == UsdGeom.Tokens.faceVarying and len(colors) == len(indices):
+        per_face = colors[starts]  # the colour of each face's first corner
+    elif interpolation == UsdGeom.Tokens.vertex and len(colors) > int(np.max(indices, initial=0)):
+        per_face = colors[np.asarray(indices, dtype=np.int64)[starts]]
+    else:
+        return None
+    distinct, keys = np.unique(per_face, axis=0, return_inverse=True)
+    if len(distinct) < 2 or len(distinct) > MAX_FACE_COLORS:
+        return None
+    opacities = mesh.GetDisplayOpacityPrimvar().ComputeFlattened(time)
+    opacity = round(float(opacities[0]), 4) if opacities else 1.0
+    triangle_keys = np.asarray(keys).reshape(-1)[faces]
+    return [(triangle_keys == k, _color_appearance(tuple(distinct[k]), opacity)) for k in range(len(distinct))]
+
+
+def appearance(prim: Any, time: Any, synthetic: str | None = None, *, gprim: Any = None) -> Appearance | None:
     """Colour and opacity from the bound material, else from ``primvars:displayColor``.
 
-    Materials under ``synthetic`` (IfcUSD's ``Looks`` scope) without an IFC
-    origin are IfcOpenShell's default colours for unstyled elements: they give
-    no appearance, so no style is invented for the IFC model.
+    ``gprim`` is the mesh a ``GeomSubset`` belongs to, whose ``displayColor``
+    stands in for a textured material. Materials under ``synthetic`` (IfcUSD's
+    ``Looks`` scope) without an IFC origin are IfcOpenShell's default colours
+    for unstyled elements: they give no appearance, so no style is invented
+    for the IFC model.
     """
-    material, _relationship = UsdShade.MaterialBindingAPI(prim).ComputeBoundMaterial()
+    gprim = gprim if gprim is not None else prim
+    display = _display_color(gprim, time)
+    material = _bound_material(prim)
     if material:
         path = material.GetPath().pathString
         if synthetic and path.startswith(synthetic) and not material.GetPrim().HasAttribute("ifc:class"):
             return None
-        return _material_appearance(material)
+        return _material_appearance(material, display)
+    if display is None:
+        return None
+    return _color_appearance(*display)
+
+
+def _bound_material(prim: Any) -> Any:
+    """The render material: bound for all purposes or the full render, else for preview."""
+    binding = UsdShade.MaterialBindingAPI(prim)
+    for purpose in (UsdShade.Tokens.full, UsdShade.Tokens.preview):
+        material, _relationship = binding.ComputeBoundMaterial(purpose)
+        if material:
+            return material
+    return None
+
+
+def _display_color(prim: Any, time: Any) -> tuple[tuple[float, float, float], float] | None:
+    """The first ``displayColor`` and ``displayOpacity`` of a gprim."""
     if not prim.IsA(UsdGeom.Gprim):
         return None
     gprim = UsdGeom.Gprim(prim)
     colors = gprim.GetDisplayColorPrimvar().ComputeFlattened(time)
     if not colors:
         return None
-    color = tuple(round(float(c), 4) for c in colors[0])
     opacities = gprim.GetDisplayOpacityPrimvar().ComputeFlattened(time)
-    opacity = round(float(opacities[0]), 4) if opacities else 1.0
-    return Appearance(f"color:{color}:{opacity}", "Colour {:.3f} {:.3f} {:.3f}".format(*color), color, opacity)
+    color = tuple(round(float(c), 4) for c in colors[0])
+    return color, round(float(opacities[0]), 4) if opacities else 1.0  # type: ignore[return-value]
 
 
-def _material_appearance(material: Any) -> Appearance:
+def _color_appearance(color: tuple[float, ...], opacity: float) -> Appearance:
+    color = tuple(round(float(c), 4) for c in color[:3])
+    return Appearance(f"color:{color}:{opacity}", "Colour {:.3f} {:.3f} {:.3f}".format(*color), color, opacity)  # type: ignore[arg-type]
+
+
+# Constant colour and opacity inputs of the common surface shaders: UsdPreviewSurface, OmniPBR,
+# OmniSurface, MaterialX / OpenPBR standard surfaces and OmniGlass.
+_COLOR_INPUTS = (
+    "diffuseColor",
+    "diffuse_color_constant",
+    "diffuse_reflection_color",
+    "base_color",
+    "baseColor",
+    "glass_color",
+    "diffuse_tint",
+)
+_OPACITY_INPUTS = ("opacity", "opacity_constant", "geometry_opacity")
+# Colours MDL materials render with when their colour input is not authored.
+_MDL_DEFAULT_COLORS = {"OmniPBR": (0.2, 0.2, 0.2), "OmniPBR_ClearCoat": (0.2, 0.2, 0.2)}
+DEFAULT_COLOR = (0.8, 0.8, 0.8)
+
+
+def _material_appearance(material: Any, display: tuple[tuple[float, float, float], float] | None) -> Appearance:
+    """Colour and opacity of a material; ``display`` (the gprim's colour) stands in for textures."""
     prim = material.GetPrim()
-    color: tuple[float, float, float] = (0.8, 0.8, 0.8)
-    opacity = 1.0
+    color: tuple[float, float, float] | None = None
+    opacity: float | None = None
     shader = _surface_shader(material)
     if shader is not None:
-        for name in ("diffuseColor", "diffuse_color_constant", "base_color"):
+        for name in _COLOR_INPUTS:
             value = _input_value(shader, name)
             if value is not None:
                 color = tuple(round(float(c), 4) for c in value)[:3]  # type: ignore[assignment]
                 break
-        for name in ("opacity", "opacity_constant"):
-            value = _input_value(shader, name)
-            if value is not None:
-                opacity = round(float(value), 4)
-                break
+        enabled = _input_value(shader, "enable_opacity")  # OmniPBR is opaque unless this is on
+        if enabled is True or (enabled is None and not (_mdl_name(shader) or "").startswith("OmniPBR")):
+            for name in _OPACITY_INPUTS:
+                value = _input_value(shader, name)
+                if value is not None:
+                    values = [float(v) for v in value] if _iterable(value) else [float(value)]
+                    opacity = round(sum(values) / len(values), 4)
+                    break
+    key = prim.GetPath().pathString
+    if color is None:  # textured, or an MDL material with its default colour
+        mdl = _mdl_name(shader) if shader is not None else None
+        if display is not None:
+            color = display[0]
+            key = f"{key}|{color}"  # the same textured material on differently coloured meshes
+        else:
+            color = _MDL_DEFAULT_COLORS.get(mdl or "", DEFAULT_COLOR)  # type: ignore[assignment]
+    if opacity is None:
+        opacity = display[1] if display is not None else 1.0
     step_id = None
     if str(prim.GetAttribute("ifc:class").Get() or "") == "IfcSurfaceStyle":
         step_value = prim.GetAttribute("ifc:stepId").Get()
         step_id = int(step_value) if step_value else None
     name = prim.GetMetadata("displayName") or prim.GetName()
-    return Appearance(prim.GetPath().pathString, str(name), color, opacity, step_id)
+    return Appearance(key, str(name), color, opacity, step_id)  # type: ignore[arg-type]
+
+
+def _mdl_name(shader: Any) -> str | None:
+    identifier = shader.GetPrim().GetAttribute("info:mdl:sourceAsset:subIdentifier")
+    return str(identifier.Get()) if identifier and identifier.HasAuthoredValue() else None
+
+
+def _iterable(value: Any) -> bool:
+    try:
+        iter(value)
+    except TypeError:
+        return False
+    return not isinstance(value, str)
 
 
 def _surface_shader(material: Any) -> Any | None:
-    for contexts in ([UsdShade.Tokens.universalRenderContext], ["mdl"]):
-        try:
-            source = material.ComputeSurfaceSource(contexts)
-        except Exception:
-            continue
-        shader = source[0] if isinstance(source, tuple) else source
-        if shader and shader.GetPrim().IsValid():
-            return shader
+    """The surface shader for the universal (UsdPreviewSurface), MDL or MaterialX context."""
+    for context in (UsdShade.Tokens.universalRenderContext, "mdl", "mtlx"):
+        # usd-core binds ComputeSurfaceSource with one render context; some releases take a list.
+        for argument in (context, [context]):
+            try:
+                source = material.ComputeSurfaceSource(argument)
+            except Exception:  # Boost.Python ArgumentError: the other signature
+                continue
+            shader = source[0] if isinstance(source, tuple) else source
+            if shader and shader.GetPrim().IsValid():
+                return shader
+            break
     return None
 
 
 def _input_value(shader: Any, name: str) -> Any | None:
+    """The constant value of a shader input, following connections to the material's interface.
+
+    ``None`` when the input is missing, unset or driven by another shader (a texture).
+    """
     shader_input = shader.GetInput(name)
     if not shader_input:
         return None
-    if shader_input.HasConnectedSource():
-        return None  # textured: no constant to read
-    return shader_input.Get()
+    for attribute in shader_input.GetValueProducingAttributes():
+        if UsdShade.Input.IsInput(attribute):
+            value = attribute.Get()
+            if value is not None:
+                return value
+    return None
 
 
 # ---------------------------------------------------------------------- primitives
@@ -338,9 +465,12 @@ class RepresentationWriter:
         self.warn = warn
         self.triangles = 0
         self.representations = 0
+        self.materials = 0
         self._context: Any = None
         self._styles: dict[str, Any] = {}
         self._maps: dict[str, Any] = {}
+        self._materials: dict[str, Any] = {}
+        self._existing_materials: dict[str, Any] | None = None
 
     @property
     def context(self) -> Any:
@@ -417,6 +547,75 @@ class RepresentationWriter:
 
     def assign(self, product: Any, shape: Any) -> None:
         product.Representation = create(self.model, "IfcProductDefinitionShape", self.warn, Representations=[shape])
+
+    def associate_materials(self, product: Any, parts: list[MeshPart]) -> None:
+        """Associate the USD render materials of a new element as IFC materials.
+
+        Each USD material becomes an ``IfcMaterial`` of the same name whose
+        appearance is its surface style; an element with several gets an
+        ``IfcMaterialConstituentSet`` (``IfcMaterialList`` in IFC2X3). A
+        material the model already has by that name is reused without
+        changing its appearance.
+        """
+        looks: dict[str, Appearance] = {}
+        for part in parts:
+            look = part.appearance
+            if look is not None and not look.key.startswith("color:"):
+                looks.setdefault(look.key.split("|")[0], look)
+        materials = [self._material(path, looks[path]) for path in sorted(looks)]
+        materials = list({m.id(): m for m in materials}.values())
+        if not materials:
+            return
+        if len(materials) == 1:
+            ifcopenshell.api.material.assign_material(self.model, products=[product], material=materials[0])
+        elif self.factory.is_ifc2x3:
+            listing = ifcopenshell.api.material.add_material_set(self.model, set_type="IfcMaterialList")
+            listing.Materials = materials
+            ifcopenshell.api.material.assign_material(
+                self.model, products=[product], type="IfcMaterialList", material=listing
+            )
+        else:
+            name = str(util_attr(product, "Name") or "Materials")
+            constituents = ifcopenshell.api.material.add_material_set(
+                self.model, name=name, set_type="IfcMaterialConstituentSet"
+            )
+            for material in materials:
+                ifcopenshell.api.material.add_constituent(
+                    self.model, constituent_set=constituents, material=material, name=material.Name
+                )
+            ifcopenshell.api.material.assign_material(
+                self.model, products=[product], type="IfcMaterialConstituentSet", material=constituents
+            )
+
+    def _material(self, path: str, look: Appearance) -> Any:
+        material = self._materials.get(path)
+        if material is not None:
+            return material
+        if self._existing_materials is None:
+            self._existing_materials = {}
+            for existing in self.model.by_type("IfcMaterial"):
+                self._existing_materials.setdefault(str(existing.Name), existing)
+        material = self._existing_materials.get(look.name)
+        if material is None:
+            material = ifcopenshell.api.material.add_material(self.model, name=look.name)
+            style = self._style(look)
+            if style is not None:
+                ifcopenshell.api.style.assign_material_style(
+                    self.model,
+                    material=material,
+                    style=style,
+                    context=self.context,
+                    should_use_presentation_style_assignment=self.factory.is_ifc2x3,
+                )
+            self._existing_materials[look.name] = material
+            self.materials += 1
+        self._materials[path] = material
+        return material
+
+    @property
+    def styles(self) -> int:
+        """Number of distinct surface styles the written geometry uses."""
+        return len({style.id() for style in self._styles.values() if style is not None})
 
     # ------------------------------------------------------------------ items
 

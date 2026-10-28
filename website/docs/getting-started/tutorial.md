@@ -245,7 +245,7 @@ output  Architecture.updated.ifc  [IFC4, merge]
 source  Architecture.ifc: matched 52 | attributes 0 | placements 0 | not in USD 0
 entities: created 0 | new objects 0 | duplicates 0 | relationships 0
 data: property sets +1 ~0 | values 7 | time series 0 | classifications 0 | templates 1
-geometry: representations 0 | triangles 0
+geometry: representations 0 | triangles 0 | styles 0 | materials 0
 completed in 0.17s (0 warning(s))
 ```
 
@@ -336,7 +336,7 @@ output  check.ifc  [IFC4, merge]
 source  Architecture.updated.ifc: matched 66 | attributes 0 | placements 0 | not in USD 0
 entities: created 0 | new objects 0 | duplicates 0 | relationships 0
 data: property sets +0 ~0 | values 0 | time series 0 | classifications 0 | templates 0
-geometry: representations 0 | triangles 0
+geometry: representations 0 | triangles 0 | styles 0 | materials 0
 completed in 0.18s (0 warning(s))
 ```
 

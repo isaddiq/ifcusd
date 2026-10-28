@@ -812,6 +812,8 @@ class ModelWriter:
                 for mesh in self.scene.mesh_prims(record.prim):
                     parts.extend(mesh_parts(self.scene, mesh, inverse @ self.scene.ifc_matrix(mesh)))
                 shape = self.representations.shape(parts)
+                if shape is not None:  # a new element is made of its USD materials
+                    self.representations.associate_materials(entity, parts)
             else:
                 shape = self._product_shape(record, inverse)
             if shape is not None:
@@ -1064,6 +1066,8 @@ class ModelWriter:
     def _finish_counts(self) -> None:
         self.counts["representations"] = self.representations.representations
         self.counts["triangles"] = self.representations.triangles
+        self.counts["styles"] = self.representations.styles
+        self.counts["materials"] = self.representations.materials
         self.counts["classificationReferences"] = self.classifications.references
         self.counts["templates"] = self.templates.templates
         self.counts["timeSeries"] = self.time_series.count if self.time_series is not None else 0
