@@ -9,10 +9,12 @@ setting can still be overridden on the command line or in
 | Up axis | Z | Z | **Y** (root `rotateX -90`) |
 | Units (`metersPerUnit`) | 1 | 1 | 1 |
 | Shared geometry | instanceable prototypes | instanceable prototypes | **inline meshes** |
-| Curve representations (axes, alignments) | yes (`guide` purpose) | yes | **no** |
+| Curve representations (axes, alignments) | yes | yes, with normals | **no** |
+| Axis and footprint curves of elements with a body | `guide` purpose | **deactivated prims** | not written |
+| Stage time-code range | not authored | **0–100 at 60 per second** | not authored |
 | Space volumes | hidden | hidden | **not written** |
 | Materials | UsdPreviewSurface | UsdPreviewSurface **+ OmniPBR (MDL)** | UsdPreviewSurface |
-| Semantic labels | `SemanticsLabelsAPI` | `SemanticsLabelsAPI` **+ legacy `SemanticsAPI`** | off |
+| Semantic labels | `SemanticsLabelsAPI` | `SemanticsLabelsAPI` | off |
 | IFC data | attributes | attributes | attributes **+ `--metadata-json` sidecar** |
 
 ## NVIDIA Omniverse
@@ -38,8 +40,19 @@ ifcusd convert model.ifc model.usdc --profile omniverse --validate
   `instanceable = true`, which reduces memory and load time in RTX.
 * **Synthetic data.** Every element has `semantics:labels:class = ["IfcWall"]`
   (or its IFC class). Replicator and Isaac Sim pick these up for semantic and
-  instance segmentation by IFC class, and the profile also writes the legacy
-  `SemanticsAPI:Semantics` attributes used by older releases.
+  instance segmentation by IFC class. Current releases deprecate the legacy
+  `SemanticsAPI:Semantics` attributes; add `--legacy-semantics` to write them
+  as well for Isaac Sim 4.x and older.
+* **Reference curves.** RTX reports a curve with an authored `purpose` as
+  empty geometry, one warning per curve. The axis and footprint curves of
+  elements that also have a body are therefore written as deactivated prims
+  (`active = false`): they stay in the file and can be activated in the Stage
+  panel, but are not loaded. `--reference-curves guide` restores
+  `purpose = guide` and `--reference-curves skip` leaves them out. Curves of
+  elements without a body (grids, alignments) stay visible and get normals,
+  which Kit's Fabric expects.
+* **Timeline.** The stage declares time codes 0 to 100 at 60 per second, like
+  a new Kit stage, so pressing Play in Isaac Sim advances time.
 * **Physics.** Models that went through `ifcusd to-ifc` carry the
   `IfcUSD_Physics` property set; it is written as `UsdPhysics` mass, rigid
   body, collider and physics-material schemas, so Isaac Sim simulates them

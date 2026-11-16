@@ -4,6 +4,30 @@ All notable changes to IfcUSD are documented here. The project follows
 [Semantic Versioning](https://semver.org/). The IFC-in-USD mapping has its own
 version (`SCHEMA_VERSION`), recorded in every output file.
 
+## Unreleased
+
+Output of the `omniverse` profile opens in Isaac Sim without the warnings the
+converter caused.
+
+### Added
+
+- `reference_curves` option (`--reference-curves {guide,inactive,skip}`) for
+  the axis and footprint curves of products that also have a body.
+- `--legacy-semantics` command-line flag.
+
+### Changed
+
+- **Omniverse profile**: reference curves are written as deactivated prims
+  (`active = false`) instead of `purpose = guide`, which RTX reports as empty
+  geometry once per curve. `--reference-curves guide` restores the previous
+  output.
+- **Omniverse profile**: `legacy_semantics` is now off by default, because
+  current Kit releases deprecate `SemanticsAPI`. Pass `--legacy-semantics`
+  (or `legacy_semantics=True`) for Isaac Sim 4.x and older.
+- **Omniverse profile**: the stage authors `startTimeCode = 0`,
+  `endTimeCode = 100` and `timeCodesPerSecond = 60`, so Isaac Sim's timeline
+  advances on Play, and curves carry normals, which Kit's Fabric expects.
+
 ## [1.1.0] — 2026-10-23
 
 Bidirectional conversion: OpenUSD back to IFC, including robot and simulation

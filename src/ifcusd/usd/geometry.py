@@ -12,6 +12,10 @@ from ifcusd.ifc.geometry import ShapeData, chain_edges
 from ifcusd.usd.sdf import Gf, LayerWriter, Vt
 
 CURVE_WIDTH_METRES = 0.01
+# Kit's defaults for a new stage. Isaac Sim's timeline needs distinct start and end codes.
+START_TIME_CODE = 0.0
+END_TIME_CODE = 100.0
+TIME_CODES_PER_SECOND = 60.0
 
 
 @dataclass
@@ -132,8 +136,12 @@ def write_curves(
     guide: bool,
     color: tuple[float, float, float] | None,
     specifier: str = "def",
+    normals: bool = False,
 ) -> int:
-    """Write curve-only geometry as linear ``UsdGeom.BasisCurves``; returns curve count."""
+    """Write curve-only geometry as linear ``UsdGeom.BasisCurves``; returns curve count.
+
+    ``normals`` also authors per-vertex normals (see :func:`curve_normals`).
+    """
     chains = chain_edges(shape.edge_indices)
     if not chains:
         return 0
@@ -146,6 +154,15 @@ def write_curves(
     writer.attribute(curves, "curveVertexCounts", "int[]", Vt.IntArray([len(c) for c in chains]), uniform=False)
     writer.attribute(curves, "points", "point3f[]", Vt.Vec3fArray.FromNumpy(points), uniform=False)
     writer.attribute(curves, "extent", "float3[]", _extent(points, pad=CURVE_WIDTH_METRES * scale), uniform=False)
+    if normals:
+        writer.attribute(
+            curves,
+            "normals",
+            "normal3f[]",
+            Vt.Vec3fArray.FromNumpy(curve_normals(points, [len(c) for c in chains])),
+            uniform=False,
+            interpolation="vertex",
+        )
     writer.attribute(
         curves,
         "widths",
@@ -166,6 +183,35 @@ def write_curves(
     if guide:
         writer.attribute(curves, "purpose", "token", "guide")
     return len(chains)
+
+
+def curve_normals(points: np.ndarray, counts: Sequence[int]) -> np.ndarray:
+    """One normal per curve vertex, perpendicular to each curve's overall direction.
+
+    NVIDIA Kit's Fabric logs "Unsupported type encountered during VtValue extraction"
+    for ``BasisCurves`` without a ``normals`` attribute. RTX draws the curves as tubes
+    either way; renderers that draw oriented ribbons face them up (+Z) where possible.
+    """
+    normals = np.zeros((len(points), 3), dtype=np.float32)
+    start = 0
+    for count in counts:
+        end = min(start + int(count), len(points))
+        if end > start:
+            direction = np.asarray(points[end - 1], dtype=np.float64) - np.asarray(points[start], dtype=np.float64)
+            length = float(np.linalg.norm(direction))
+            direction = direction / length if length > 1e-12 else np.array([1.0, 0.0, 0.0])
+            reference = np.array([1.0, 0.0, 0.0]) if abs(direction[2]) > 0.9 else np.array([0.0, 0.0, 1.0])
+            normal = reference - float(reference @ direction) * direction
+            normals[start:end] = normal / np.linalg.norm(normal)
+        start = end
+    return normals
+
+
+def write_time_range(layer: Any) -> None:
+    """Author a time-code range on a static stage, for timeline playback in Isaac Sim."""
+    layer.startTimeCode = START_TIME_CODE
+    layer.endTimeCode = END_TIME_CODE
+    layer.timeCodesPerSecond = TIME_CODES_PER_SECOND
 
 
 def _extent(points: np.ndarray, pad: float = 0.0) -> Any:

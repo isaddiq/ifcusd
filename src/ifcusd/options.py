@@ -13,6 +13,7 @@ SPACE_MODES = ("hidden", "visible", "skip")
 MATERIAL_MODELS = ("preview", "preview+mdl")
 RELATIONSHIP_MODES = ("generic", "all")
 UP_AXES = ("Y", "Z")
+REFERENCE_CURVE_MODES = ("guide", "inactive", "skip")
 
 # Settings that each target profile changes from the dataclass defaults. Anything a
 # caller passes explicitly to ``ConversionOptions.for_profile`` wins over these.
@@ -23,7 +24,8 @@ _PROFILE_DEFAULTS: dict[str, dict[str, Any]] = {
         "material_model": "preview+mdl",
         "instancing": True,
         "include_curves": True,
-        "legacy_semantics": True,
+        # RTX reports a curve with an authored purpose as empty geometry (one warning each).
+        "reference_curves": "inactive",
     },
     "unity": {
         # Unity's USD importer handles meshes, transforms and UsdPreviewSurface only.
@@ -82,6 +84,11 @@ class ConversionOptions:
         instancing: Share identical type geometry through instanceable prims.
         include_curves: Write curve representations (axes, alignments,
             annotations) as ``BasisCurves``.
+        reference_curves: Curves of products that also have a body (wall and
+            beam axes, footprints): ``"guide"`` writes them with
+            ``purpose = guide``, ``"inactive"`` writes them as deactivated
+            prims (kept in the file but not composed; the ``omniverse``
+            default) and ``"skip"`` leaves them out.
         include_openings: Also tessellate opening elements (written hidden).
         spaces: Space geometry: ``"hidden"``, ``"visible"`` or ``"skip"``.
         generate_uvs: Generate box-projected UVs (automatic for textured models).
@@ -104,7 +111,8 @@ class ConversionOptions:
         inherit_type_properties: Copy type property sets onto occurrences
             (occurrence values win per property).
         semantic_labels: Author ``SemanticsLabelsAPI`` class labels.
-        legacy_semantics: Also author the legacy Omniverse ``SemanticsAPI``.
+        legacy_semantics: Also author the legacy Omniverse ``SemanticsAPI``
+            (deprecated in current Kit releases; for Isaac Sim 4.x and older).
         physics: Re-apply the ``IfcUSD_Physics`` property set (written by
             ``ifcusd to-ifc``) as ``UsdPhysics`` schemas: mass, rigid body,
             colliders and physics materials. Needs property sets.
@@ -135,6 +143,7 @@ class ConversionOptions:
     use_world_coords: bool = False
     instancing: bool = True
     include_curves: bool = True
+    reference_curves: str = "guide"
     include_openings: bool = False
     spaces: str = "hidden"
     generate_uvs: bool = False
@@ -171,6 +180,8 @@ class ConversionOptions:
             raise ValueError(f"naming must be one of {NAMING_MODES}, got {self.naming!r}")
         if self.spaces not in SPACE_MODES:
             raise ValueError(f"spaces must be one of {SPACE_MODES}, got {self.spaces!r}")
+        if self.reference_curves not in REFERENCE_CURVE_MODES:
+            raise ValueError(f"reference_curves must be one of {REFERENCE_CURVE_MODES}, got {self.reference_curves!r}")
         if self.relationship_prims not in RELATIONSHIP_MODES:
             raise ValueError(f"relationship_prims must be one of {RELATIONSHIP_MODES}, got {self.relationship_prims!r}")
         if self.material_model not in MATERIAL_MODELS:
@@ -223,6 +234,15 @@ class ConversionOptions:
     @property
     def write_mdl(self) -> bool:
         return self.material_model == "preview+mdl"
+
+    @property
+    def targets_kit(self) -> bool:
+        """Author what NVIDIA Kit applications (Isaac Sim, USD Composer) need beyond plain USD.
+
+        That is a stage time-code range, without which Isaac Sim's timeline loops over a
+        single frame, and normals on curves, without which Fabric logs type warnings.
+        """
+        return self.profile == "omniverse"
 
     def with_changes(self, **changes: Any) -> ConversionOptions:
         """Copy of these options with some fields changed."""

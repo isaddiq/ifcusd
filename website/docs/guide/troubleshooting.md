@@ -118,6 +118,27 @@
     `UsdPreviewSurface` is used everywhere else. Use the `generic` profile (or
     `--material-model preview`) for files meant for other tools.
 
+??? question "Isaac Sim logs warnings when it opens the converted file"
+    Convert with `--profile omniverse`. Files written with the `generic`
+    profile, or by IfcUSD 1.1.0 and older, cause these in Isaac Sim:
+
+    * `The geometry '…/Axis' is empty, and will not be rendered`, once per
+      wall or beam axis: RTX reports curves with `purpose = guide` this way.
+      The Omniverse profile writes them as deactivated prims instead.
+    * `Unsupported type encountered during VtValue extraction`: curves
+      without normals. The Omniverse profile writes normals.
+    * `The current USD stage has no usable time-code range` on Play. The
+      Omniverse profile authors time codes 0 to 100.
+    * `Semantics.SemanticsAPI is deprecated`: the legacy semantics, which are
+      now opt-in (`--legacy-semantics`).
+
+    Two messages can remain and are harmless. `Encountered USD Warnings but
+    USD Diagnostics are currently muted` appears for any stage with
+    `instanceable` prims; `--no-instancing` avoids it at the cost of larger
+    files. `attribute timeVaryingAttributes not found for bucket id …`
+    appears once when a stage contains visible curves, such as grids or
+    alignments; `--no-curves` leaves those out.
+
 ??? question "Unity imports nothing"
     `.usdz` files import automatically. For `.usd`, `.usda` and `.usdc`,
     select the file and enable **Import** in the Inspector. The USD Importer

@@ -21,6 +21,7 @@ from ifcusd.options import (
     MATERIAL_MODELS,
     NAMING_MODES,
     PROFILES,
+    REFERENCE_CURVE_MODES,
     SPACE_MODES,
     ConversionOptions,
     IfcExportOptions,
@@ -84,6 +85,14 @@ def build_parser() -> argparse.ArgumentParser:
     geometry.add_argument(
         "--no-curves", action="store_true", help="Skip curve representations (axes, alignments, annotations)."
     )
+    geometry.add_argument(
+        "--reference-curves",
+        choices=REFERENCE_CURVE_MODES,
+        help=(
+            "Axis and footprint curves of products with a body: guide (default; purpose = guide), "
+            "inactive (deactivated prims; omniverse default) or skip."
+        ),
+    )
     geometry.add_argument("--openings", action="store_true", help="Also tessellate opening elements (hidden).")
     geometry.add_argument("--spaces", choices=SPACE_MODES, help="Space geometry: hidden (default), visible or skip.")
     geometry.add_argument(
@@ -120,6 +129,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-type-inheritance", action="store_true", help="Do not copy type property sets onto occurrences."
     )
     data.add_argument("--no-semantic-labels", action="store_true", help="Do not author UsdSemantics class labels.")
+    data.add_argument(
+        "--legacy-semantics",
+        action="store_true",
+        help="Also author the legacy Omniverse SemanticsAPI (Isaac Sim 4.x and older).",
+    )
     data.add_argument(
         "--no-physics",
         action="store_true",
@@ -302,6 +316,7 @@ def _options(args: argparse.Namespace) -> ConversionOptions:
         "root_prim_name",
         "naming",
         "spaces",
+        "reference_curves",
         "material_model",
         "linear_deflection",
         "angular_deflection",
@@ -324,6 +339,7 @@ def _options(args: argparse.Namespace) -> ConversionOptions:
         "no_owner_history": ("include_owner_history", False),
         "no_type_inheritance": ("inherit_type_properties", False),
         "no_semantic_labels": ("semantic_labels", False),
+        "legacy_semantics": ("legacy_semantics", True),
         "no_physics": ("physics", False),
         "strict": ("ignore_geometry_errors", False),
         "no_schema_fallback": ("schema_fallback", False),

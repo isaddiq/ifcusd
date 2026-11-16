@@ -284,7 +284,10 @@ that ignore materials. Per-face styles become `GeomSubset`s in the
   its contents.
 * Each representation context becomes a child prim named after it. `Body`
   becomes a `Mesh`. `Axis`, `FootPrint` and similar become `BasisCurves`
-  (linear); they are `purpose = guide` when the product also has a body.
+  (linear). When the product also has a body they are reference geometry:
+  `purpose = guide`, or deactivated prims (`active = false`) with the
+  Omniverse profile, because RTX reports curves with an authored purpose as
+  empty geometry (`reference_curves` option).
 * Meshes are triangulated, with `subdivisionScheme = none` (BIM geometry must
   not be smoothed), per-corner normals, `extent`, and `doubleSided = true`
   (configurable).
@@ -300,8 +303,8 @@ that ignore materials. Per-face styles become `GeomSubset`s in the
 ### 3.8 Semantic labels
 
 Elements get `SemanticsLabelsAPI:class` with `semantics:labels:class =
-["<IfcClass>"]` (OpenUSD's `UsdSemantics`). The Omniverse profile also writes
-the legacy `SemanticsAPI:Semantics` attributes. Omniverse Replicator and
+["<IfcClass>"]` (OpenUSD's `UsdSemantics`). The `legacy_semantics` option also
+writes the legacy `SemanticsAPI:Semantics` attributes. Omniverse Replicator and
 Isaac Sim can therefore produce segmentation ground truth by IFC class, for
 example for machine-learning research on building data, without any extra
 labelling.

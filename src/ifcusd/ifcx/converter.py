@@ -167,6 +167,10 @@ class _IfcxWriter:
         self.layer.defaultPrim = self.options.root_prim_name
         self.layer.pseudoRoot.SetInfo("upAxis", self.options.up_axis)
         self.layer.pseudoRoot.SetInfo("metersPerUnit", float(self.options.output_meters_per_unit))
+        if self.options.targets_kit:
+            from ifcusd.usd.geometry import write_time_range
+
+            write_time_range(self.layer)
         self.layer.documentation = f"Converted from {self.layers[0].path.name} (IFC5/IFCX) by IfcUSD {__version__}"
         from ifcusd.usd.sdf import usd_dictionary
 
@@ -454,7 +458,7 @@ class _IfcxWriter:
         self.counts["meshes"] += 1
 
     def _write_curves(self, path: str, curves: dict[str, Any], color: Any) -> None:
-        from ifcusd.usd.geometry import CURVE_WIDTH_METRES
+        from ifcusd.usd.geometry import CURVE_WIDTH_METRES, curve_normals
         from ifcusd.usd.sdf import Gf, Vt
 
         points = np.asarray(curves.get("points", []), dtype=np.float64).reshape(-1, 3) * self.scale
@@ -474,6 +478,15 @@ class _IfcxWriter:
             uniform=False,
             interpolation="constant",
         )
+        if self.options.targets_kit:
+            w.attribute(
+                spec,
+                "normals",
+                "normal3f[]",
+                Vt.Vec3fArray.FromNumpy(curve_normals(points, [int(c) for c in counts])),
+                uniform=False,
+                interpolation="vertex",
+            )
         low, high = points.min(axis=0), points.max(axis=0)
         w.attribute(
             spec,

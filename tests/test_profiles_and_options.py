@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from conftest import open_stage, prim_named, prims_by_class
+from conftest import SAMPLES, open_stage, prim_named, prims_by_class
 
 from ifcusd import ConversionOptions, convert, validate_usd
 from ifcusd.errors import InputError, OutputError
@@ -29,7 +29,7 @@ def test_unity_profile(ifc_files, tmp_path) -> None:
     assert validate_usd(target).ok
 
 
-def test_omniverse_profile_adds_mdl_and_legacy_semantics(ifc_files, tmp_path) -> None:
+def test_omniverse_profile_adds_mdl_and_semantic_labels(ifc_files, tmp_path) -> None:
     target = tmp_path / "omni.usd"
     convert(ifc_files["IFC4"], target, ConversionOptions.for_profile("omniverse"))
     stage = open_stage(target)
@@ -39,9 +39,92 @@ def test_omniverse_profile_adds_mdl_and_legacy_semantics(ifc_files, tmp_path) ->
     assert shader.GetAttribute("info:mdl:sourceAsset:subIdentifier").Get() == "OmniPBR"
     assert shader.GetAttribute("inputs:enable_opacity").Get() is True
     wall = prim_named(stage, "Wall 1")
-    assert wall.GetAttribute("semantic:Semantics:params:semanticData").Get() == "IfcWall"
+    assert list(wall.GetAttribute("semantics:labels:class").Get()) == ["IfcWall"]
+    # Kit deprecates the legacy SemanticsAPI, so it is opt-in.
+    assert not wall.GetAttribute("semantic:Semantics:params:semanticData")
     report = validate_usd(target)
     assert report.ok, [(i.code, i.message) for i in report.errors]
+
+
+def test_legacy_semantics_are_opt_in(ifc_files, tmp_path) -> None:
+    target = tmp_path / "legacy_semantics.usda"
+    convert(ifc_files["IFC4"], target, ConversionOptions.for_profile("omniverse", legacy_semantics=True))
+    stage = open_stage(target)
+    wall = prim_named(stage, "Wall 1")
+    assert wall.GetAttribute("semantic:Semantics:params:semanticData").Get() == "IfcWall"
+
+
+def test_omniverse_profile_authors_a_time_code_range(ifc_files, tmp_path) -> None:
+    # Isaac Sim's timeline loops over a single frame (and warns) without distinct start and end codes.
+    target = tmp_path / "omni.usda"
+    convert(ifc_files["IFC4"], target, ConversionOptions.for_profile("omniverse"))
+    stage = open_stage(target)
+    assert stage.HasAuthoredTimeCodeRange()
+    assert (stage.GetStartTimeCode(), stage.GetEndTimeCode(), stage.GetTimeCodesPerSecond()) == (0.0, 100.0, 60.0)
+
+    generic = tmp_path / "generic.usda"
+    convert(ifc_files["IFC4"], generic, ConversionOptions())
+    assert not open_stage(generic).HasAuthoredTimeCodeRange()
+
+
+def _reference_curves(stage) -> list:
+    """Curve prims of products that also have a body, deactivated ones included."""
+    from pxr import Usd
+
+    curves = [p for p in Usd.PrimRange.Stage(stage, Usd.PrimAllPrimsPredicate) if p.GetTypeName() == "BasisCurves"]
+    return [p for p in curves if p.GetParent().GetChild("Body")]
+
+
+def test_omniverse_profile_deactivates_reference_curves(tmp_path) -> None:
+    # RTX reports curves with an authored purpose as empty geometry and Fabric rejects
+    # curves without normals: one warning per wall or beam axis in Isaac Sim.
+    from pxr import UsdGeom
+
+    target = tmp_path / "omni.usda"
+    result = convert(SAMPLES / "example.ifc", target, ConversionOptions.for_profile("omniverse"))
+    stage = open_stage(target)
+    curves = _reference_curves(stage)
+    assert curves and len(curves) == result.report.counts["curves"]
+    for prim in curves:
+        assert not prim.IsActive()
+        assert not prim.GetAttribute("purpose").HasAuthoredValue()
+        normals = prim.GetAttribute("normals").Get()
+        points = prim.GetAttribute("points").Get()
+        assert len(normals) == len(points)
+        direction = points[-1] - points[0]
+        assert abs(normals[0] * direction) < 1e-5 and normals[0].GetLength() == pytest.approx(1.0)
+    assert not any(p.IsA(UsdGeom.BasisCurves) for p in stage.Traverse())  # nothing left for a renderer
+    assert validate_usd(target, source=SAMPLES / "example.ifc").ok
+
+
+@pytest.mark.parametrize("mode", ["guide", "skip"])
+def test_reference_curve_modes(mode, tmp_path) -> None:
+    target = tmp_path / f"{mode}.usda"
+    options = ConversionOptions.for_profile("omniverse", reference_curves=mode)
+    result = convert(SAMPLES / "example.ifc", target, options)
+    stage = open_stage(target)
+    curves = _reference_curves(stage)
+    assert len(curves) == result.report.counts["curves"]
+    assert result.report.complete, result.report.warnings
+    if mode == "skip":
+        assert not curves
+    else:
+        assert curves and all(p.IsActive() and p.GetAttribute("purpose").Get() == "guide" for p in curves)
+
+
+def test_generic_profile_keeps_guide_curves_without_normals(tmp_path) -> None:
+    target = tmp_path / "generic.usda"
+    convert(SAMPLES / "example.ifc", target, ConversionOptions())
+    stage = open_stage(target)
+    curves = _reference_curves(stage)
+    assert curves
+    assert all(p.IsActive() and p.GetAttribute("purpose").Get() == "guide" for p in curves)
+    assert not any(p.GetAttribute("normals").HasAuthoredValue() for p in curves)
+
+
+def test_reference_curves_option_is_validated() -> None:
+    with pytest.raises(ValueError, match="reference_curves"):
+        ConversionOptions(reference_curves="hidden")
 
 
 def test_usdz_package(ifc_files, tmp_path) -> None:

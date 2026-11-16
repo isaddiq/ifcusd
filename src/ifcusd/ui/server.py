@@ -61,6 +61,7 @@ TO_USD_OPTIONS = {
     "naming": str,
     "instancing": bool,
     "include_curves": bool,
+    "reference_curves": str,
     "include_openings": bool,
     "spaces": str,
     "use_world_coords": bool,

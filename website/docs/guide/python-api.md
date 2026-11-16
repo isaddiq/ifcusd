@@ -99,6 +99,7 @@ print(options.to_dict())          # serializable view (also stored in each file)
 | `use_world_coords` | `False` | Bake transforms into points |
 | `instancing` | `True` | Instanceable prototypes for shared geometry |
 | `include_curves` | `True` | Curve representations as `BasisCurves` |
+| `reference_curves` | `"guide"` | Curves of products that also have a body: `"guide"` (`purpose = guide`), `"inactive"` (deactivated prims) or `"skip"` |
 | `include_openings` | `False` | Tessellate openings (hidden) |
 | `spaces` | `"hidden"` | `"hidden"`, `"visible"` or `"skip"` |
 | `generate_uvs` | `False` | Box-projected UVs (automatic with textures) |
@@ -112,7 +113,7 @@ print(options.to_dict())          # serializable view (also stored in each file)
 | `include_owner_history` | `True` | `IfcOwnerHistory` records |
 | `inherit_type_properties` | `True` | Copy type property sets onto occurrences |
 | `semantic_labels` | `True` | `SemanticsLabelsAPI` class labels |
-| `legacy_semantics` | `False` | Legacy Omniverse `SemanticsAPI` labels |
+| `legacy_semantics` | `False` | Legacy Omniverse `SemanticsAPI` labels (Isaac Sim 4.x and older) |
 | `physics` | `True` | Re-apply `IfcUSD_Physics` as `UsdPhysics` schemas |
 | `material_model` | `"preview"` | `"preview"` or `"preview+mdl"` |
 | `ignore_geometry_errors` | `True` | Continue past elements whose geometry fails |
@@ -126,11 +127,17 @@ Profile presets:
 | `up_axis` | `Z` | `Z` | `Y` |
 | `instancing` | on | on | off |
 | `include_curves` | on | on | off |
+| `reference_curves` | guide | inactive | (no curves) |
 | `spaces` | hidden | hidden | skip |
 | `material_model` | preview | preview+mdl | preview |
 | `semantic_labels` | on | on | off |
-| `legacy_semantics` | off | on | off |
+| `legacy_semantics` | off | off | off |
 | `physics` | on | on | off |
+
+The `omniverse` profile also authors a stage time-code range
+(`startTimeCode = 0`, `endTimeCode = 100`, `timeCodesPerSecond = 60`) and
+normals on curves, which Isaac Sim needs for timeline playback and a clean
+log.
 
 Invalid values raise `ValueError` when the options are created.
 

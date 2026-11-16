@@ -56,6 +56,7 @@ instances are counted as `filtered` in the report, not `missing`.
 | `--threads N` | CPU count − 1 | Tessellation threads. Output is identical for any value. |
 | `--no-instancing` | instancing on (off for unity) | Write every mesh inline instead of sharing prototypes |
 | `--no-curves` | curves on (off for unity) | Skip axis, alignment and annotation curves |
+| `--reference-curves {guide,inactive,skip}` | `guide` (`inactive` for omniverse) | Axis and footprint curves of products that also have a body: `purpose = guide`, deactivated prims, or left out |
 | `--spaces {hidden,visible,skip}` | `hidden` (`skip` for unity) | Geometry of spaces and zones |
 | `--openings` | off | Also tessellate opening elements (written hidden) |
 | `--uvs` | automatic for textured models | Generate box-projected UVs |
@@ -77,6 +78,7 @@ instances are counted as `filtered` in the report, not `missing`.
 | `--no-owner-history` | Leave out `IfcOwnerHistory` records |
 | `--no-type-inheritance` | Keep type property sets on the type only |
 | `--no-semantic-labels` | Do not author `UsdSemantics` class labels |
+| `--legacy-semantics` | Also author the legacy Omniverse `SemanticsAPI` (Isaac Sim 4.x and older; deprecated in current releases) |
 | `--no-physics` | Do not re-apply `IfcUSD_Physics` property sets as `UsdPhysics` schemas (off for unity) |
 | `--material-model {preview,preview+mdl}` | UsdPreviewSurface only, or with an OmniPBR MDL network (omniverse default) |
 

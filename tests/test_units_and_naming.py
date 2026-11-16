@@ -88,7 +88,11 @@ def test_profiles_set_target_defaults() -> None:
     unity = ConversionOptions.for_profile("unity")
     assert (unity.up_axis, unity.instancing, unity.include_curves, unity.spaces) == ("Y", False, False, "skip")
     omniverse = ConversionOptions.for_profile("omniverse", up_axis="Y")
-    assert omniverse.write_mdl and omniverse.legacy_semantics and omniverse.up_axis == "Y"
+    assert omniverse.write_mdl and omniverse.up_axis == "Y"
+    assert not omniverse.legacy_semantics  # deprecated by Kit, opt-in
+    assert (omniverse.reference_curves, omniverse.targets_kit) == ("inactive", True)
+    generic = ConversionOptions()
+    assert (generic.reference_curves, generic.targets_kit) == ("guide", False)
     assert ConversionOptions(meters_per_unit=0.01).output_scale == pytest.approx(100.0)
 
 

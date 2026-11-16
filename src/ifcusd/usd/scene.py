@@ -37,7 +37,7 @@ from ifcusd.ifc.units import UnitResolver
 from ifcusd.ifc.values import jsonable, to_json, to_usd_value
 from ifcusd.naming import UniqueNames, lower_first, safe_identifier
 from ifcusd.options import ConversionOptions
-from ifcusd.usd.geometry import write_curves, write_mesh
+from ifcusd.usd.geometry import write_curves, write_mesh, write_time_range
 from ifcusd.usd.materials import write_material
 from ifcusd.usd.physics import (
     PHYSICS_MATERIALS_SCOPE,
@@ -151,6 +151,8 @@ class SceneWriter:
         root_layer = layer.pseudoRoot
         root_layer.SetInfo("upAxis", self.options.up_axis)
         root_layer.SetInfo("metersPerUnit", float(self.options.output_meters_per_unit))
+        if self.options.targets_kit:
+            write_time_range(layer)
         layer.customLayerData = {"ifcusd": usd_dictionary(layer_data)}
         layer.documentation = (
             f"Converted from {file_info.get('sourceName', 'IFC')} "
@@ -677,7 +679,15 @@ class SceneWriter:
         if shape.materials:
             spec = self.styles.spec_for(shape.materials[0])
             color = spec.base_color
-        count = write_curves(self._scratch_writer, body_path, shape, scale=self.scale, guide=False, color=color)
+        count = write_curves(
+            self._scratch_writer,
+            body_path,
+            shape,
+            scale=self.scale,
+            guide=False,
+            color=color,
+            normals=self.options.targets_kit,
+        )
         if count:
             spec = self._scratch.GetPrimAtPath(body_path)
             if instance_xform is not None:
@@ -697,11 +707,22 @@ class SceneWriter:
 
     def finalize(self) -> None:
         # Curves of products that also have a mesh are reference geometry (axes, footprints).
+        mode = self.options.reference_curves
         for path, product_id in self._curve_paths.items():
-            if product_id in self._products_with_mesh:
-                spec = self._scratch.GetPrimAtPath(path)
-                if spec is not None:
-                    self._scratch_writer.attribute(spec, "purpose", "token", "guide")
+            if product_id not in self._products_with_mesh:
+                continue
+            spec = self._scratch.GetPrimAtPath(path)
+            if spec is None:
+                continue
+            if mode == "skip":
+                self._remove_scratch(path)
+                self.stats.curves -= 1
+            elif mode == "inactive":
+                # Not composed, so no renderer sees it: RTX reports every curve with an
+                # authored purpose as "empty" geometry.
+                spec.active = False
+            else:
+                self._scratch_writer.attribute(spec, "purpose", "token", "guide")
 
         for path in sorted(self._geometry_paths, key=_path_sort_key):
             if self._scratch.GetPrimAtPath(path) is None:

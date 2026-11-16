@@ -218,6 +218,7 @@ const USD_GROUPS = [
   { title: "Geometry", fields: [
     { name: "instancing", label: "Share repeated geometry", note: "USD instancing for type geometry" },
     { name: "include_curves", label: "Axis and footprint curves" },
+    { name: "reference_curves", label: "Curves of elements with a body", choices: [["guide", "Guide purpose"], ["inactive", "Deactivated, for Isaac Sim"], ["skip", "Left out"]] },
     { name: "include_openings", label: "Opening volumes" },
     { name: "spaces", label: "Spaces", choices: [["hidden", "Hidden"], ["visible", "Visible"], ["skip", "Left out"]] },
     { name: "use_world_coords", label: "Bake placements into points" },
@@ -229,7 +230,7 @@ const USD_GROUPS = [
     { name: "include_relationships", label: "Relationships" },
     { name: "inherit_type_properties", label: "Copy type properties onto occurrences" },
     { name: "semantic_labels", label: "Semantic class labels", note: "UsdSemantics, for synthetic data" },
-    { name: "legacy_semantics", label: "Legacy Omniverse semantics" },
+    { name: "legacy_semantics", label: "Legacy Omniverse semantics", note: "SemanticsAPI, for Isaac Sim 4.x and older" },
   ] },
   { title: "Simulation and look", fields: [
     { name: "physics", label: "Apply IfcUSD_Physics as UsdPhysics", note: "Mass, rigid bodies, colliders, friction", tone: "physics" },
