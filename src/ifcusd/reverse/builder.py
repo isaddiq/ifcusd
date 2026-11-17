@@ -1103,7 +1103,11 @@ def _plain(value: Any) -> Any:
 
 
 def _same_placement(a: np.ndarray, b: np.ndarray) -> bool:
-    return bool(np.allclose(a[:3, :3], b[:3, :3], atol=1e-7) and np.allclose(a[:3, 3], b[:3, 3], atol=1e-6))
+    # Absolute tolerances only: NumPy's default relative tolerance (1e-5) would otherwise hide translations of
+    # several metres at georeferenced coordinates (about 4 m at 4e5 m).
+    return bool(
+        np.allclose(a[:3, :3], b[:3, :3], rtol=0.0, atol=1e-7) and np.allclose(a[:3, 3], b[:3, 3], rtol=0.0, atol=1e-6)
+    )
 
 
 def _signature(values: list[SetValue]) -> tuple[Any, ...]:

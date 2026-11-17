@@ -436,6 +436,22 @@ def test_value_helpers() -> None:
     assert not values_equal(True, 1)
 
 
+def test_placement_comparison_is_absolute_at_georeferenced_coordinates() -> None:
+    from ifcusd.reverse.builder import _same_placement
+
+    source = np.eye(4)
+    source[:3, 3] = [417589.65, 78712.19, 239.57]  # metres, a georeferenced project
+    moved = source.copy()
+    moved[0, 3] += 0.5
+    assert not _same_placement(source, moved)
+    nudged = source.copy()
+    nudged[0, 3] += 5e-7
+    assert _same_placement(source, nudged)
+    turned = source.copy()
+    turned[:2, :2] = [[np.cos(1e-6), -np.sin(1e-6)], [np.sin(1e-6), np.cos(1e-6)]]
+    assert not _same_placement(source, turned)
+
+
 def test_geometry_helpers() -> None:
     from ifcusd.reverse.geometry import _cube, _lathe, triangulate
     from ifcusd.reverse.stage import quaternion, rigid
